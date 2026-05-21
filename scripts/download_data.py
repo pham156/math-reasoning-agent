@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from src.config import data_dir, print_storage_summary
+from src.core.config import data_dir, print_storage_summary
 
 
 def main() -> None:

@@ -47,6 +47,24 @@ The setup script keeps those two locations separate.
   cache/
 ```
 
+## Source Layout
+
+Implementation code is organized by subsystem:
+
+```text
+src/core/        shared config and baseline model inference
+src/retrieval/   MATH indexing, FAISS retrieval, reranking, prompt context
+src/agents/      solver agent, self-critique loop, end-to-end pipeline
+src/verifier/    verifier prompts, schemas, scoring, backend adapters
+src/proof/       proof-search tree, branch scoring, visualization
+src/evaluation/  answer matching, benchmark runner, aggregate metrics
+src/training/    QLoRA fine-tuning entrypoint
+```
+
+The old top-level command paths such as `python src/run_pipeline.py` and
+`python src/build_index.py` are kept as thin wrappers for compatibility with
+the README and Slurm scripts.
+
 ## Environment Setup
 
 From the project root:
@@ -144,12 +162,12 @@ python src/retrieve.py --problem "Find all integer solutions to x^2 - y^2 = 15."
 
 The retrieval system is intentionally more than semantic nearest-neighbor search:
 
-- `src/math_taxonomy.py` infers topic/subfield, proof strategy, and theorem-pattern labels.
-- `src/retrieval_embedding.py` builds embedding text from problem, solution, topic, strategy, and theorem signals.
-- `src/retrieve.py` runs FAISS broad retrieval.
-- `src/retrieval_rerank.py` reranks candidates using semantic score, topic overlap, strategy overlap, theorem-pattern overlap, lexical overlap, and solution-shape features.
-- `src/strategy_bank.py` stores compact theorem/proof-strategy descriptions for prompt hints.
-- `src/retrieval_context.py` formats the final context for the solver LLM.
+- `src/retrieval/math_taxonomy.py` infers topic/subfield, proof strategy, and theorem-pattern labels.
+- `src/retrieval/embedding.py` builds embedding text from problem, solution, topic, strategy, and theorem signals.
+- `src/retrieval/retrieve.py` runs FAISS broad retrieval.
+- `src/retrieval/rerank.py` reranks candidates using semantic score, topic overlap, strategy overlap, theorem-pattern overlap, lexical overlap, and solution-shape features.
+- `src/retrieval/strategy_bank.py` stores compact theorem/proof-strategy descriptions for prompt hints.
+- `src/retrieval/context.py` formats the final context for the solver LLM.
 
 Useful retrieval inspection commands:
 
@@ -228,12 +246,12 @@ The verifier is modular so the prompt-based checker can later be replaced by a t
 
 Core modules:
 
-- `src/verifier_prompts.py`: verifier, critique, and revision prompt templates
-- `src/verifier_schema.py`: structured `VerificationResult` and `VerificationIssue` schema
-- `src/verifier_scoring.py`: fallback scoring from issue categories and severities
-- `src/verifier_backends.py`: `VerifierBackend` interface and prompt-based backend
-- `src/critique_generation.py`: deterministic or LLM-generated critique text
-- `src/self_critique_loop.py`: solver -> verifier -> revised solver loop
+- `src/verifier/prompts.py`: verifier, critique, and revision prompt templates
+- `src/verifier/schema.py`: structured `VerificationResult` and `VerificationIssue` schema
+- `src/verifier/scoring.py`: fallback scoring from issue categories and severities
+- `src/verifier/backends.py`: `VerifierBackend` interface and prompt-based backend
+- `src/verifier/critique_generation.py`: deterministic or LLM-generated critique text
+- `src/agents/self_critique_loop.py`: solver -> verifier -> revised solver loop
 
 Verifier checks:
 
@@ -293,11 +311,11 @@ Supported strategy families include:
 
 Core modules:
 
-- `src/proof_tree.py`: proof tree node structure and traversal helpers
-- `src/proof_prompts.py`: strategy generation, branch expansion, and proof completion prompts
-- `src/proof_scoring.py`: heuristic branch scoring plus optional verifier scoring
-- `src/proof_search.py`: beam-style search controller
-- `src/proof_visualization.py`: text, JSON, and Mermaid export utilities
+- `src/proof/tree.py`: proof tree node structure and traversal helpers
+- `src/proof/prompts.py`: strategy generation, branch expansion, and proof completion prompts
+- `src/proof/scoring.py`: heuristic branch scoring plus optional verifier scoring
+- `src/proof/search.py`: beam-style search controller
+- `src/proof/visualization.py`: text, JSON, and Mermaid export utilities
 
 Run a lightweight proof search:
 
