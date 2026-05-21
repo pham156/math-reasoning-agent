@@ -1,0 +1,29 @@
+name: math-reasoning-agent
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  - python>=3.10
+  - pip
+  - numpy
+  - pandas
+  - scikit-learn
+  - tqdm
+  - pip:
+      - torch
+      - transformers
+      - accelerate
+      - datasets
+      - huggingface_hub
+      - sentence-transformers
+      - faiss-cpu
+      - peft
+      - bitsandbytes
+      - trl
+      - fastapi
+      - uvicorn
+      - pydantic
+      - python-dotenv
+      - wandb
+      - matplotlib

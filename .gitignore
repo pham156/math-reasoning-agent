@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local environments
+env/
+.venv/
+venv/
+
+# Logs and experiment outputs kept in home, not source control
+logs/
+*.log
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# OS/editor
+.DS_Store
+*.swp
+*.swo
+
+# Large artifacts should live in /scratch/gilbreth, not this repo
+models/
+data/
+outputs/
+cache/
+checkpoints/
