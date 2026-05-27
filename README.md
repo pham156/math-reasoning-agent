@@ -231,6 +231,44 @@ Pipeline:
 5. revise if the verifier marks the solution invalid or uncertain
 6. print the final solution
 
+## First End-to-End Smoke Test
+
+This is the frozen minimal vertical slice. It works from the project root and
+falls back to a deterministic mock LLM if the 7B model or ML dependencies are
+not available yet. If the FAISS/MATH index is unavailable, it uses a tiny toy
+retrieval set.
+
+```bash
+cd /home/pham156/math-reasoning-agent
+source scripts/setup_env.sh
+
+python -m src.agents.pipeline \
+  --problem "Find all real x such that x^2 - 5x + 6 = 0." \
+  --top_k 3 \
+  --max_new_tokens 512 \
+  --output outputs/smoke_test.json
+```
+
+Relative paths under `outputs/` are saved under scratch:
+
+```bash
+$OUTPUT_DIR/smoke_test.json
+```
+
+Force mock mode explicitly:
+
+```bash
+python -m src.agents.pipeline \
+  --problem "Find all real x such that x^2 - 5x + 6 = 0." \
+  --top_k 3 \
+  --max_new_tokens 512 \
+  --mock_llm \
+  --output outputs/smoke_test.json
+```
+
+The saved JSON includes the input problem, retrieved examples, solver prompt,
+raw solution, verifier critique, final solution, and runtime metadata.
+
 Control the self-critique loop:
 
 ```bash
