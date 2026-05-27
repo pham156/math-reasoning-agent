@@ -146,6 +146,12 @@ source scripts/setup_env.sh
 python src/build_index.py
 ```
 
+Equivalent package entrypoint:
+
+```bash
+python -m src.retrieval.build_index
+```
+
 Outputs:
 
 ```bash
@@ -158,6 +164,14 @@ Test retrieval:
 
 ```bash
 python src/retrieve.py --problem "Find all integer solutions to x^2 - y^2 = 15." --top_k 3
+```
+
+Test the package entrypoint after the index exists:
+
+```bash
+python -m src.retrieval.retrieve \
+  --problem "Find all real x such that x^2 - 5x + 6 = 0." \
+  --top_k 3
 ```
 
 The retrieval system is intentionally more than semantic nearest-neighbor search:
@@ -268,6 +282,29 @@ python -m src.agents.pipeline \
 
 The saved JSON includes the input problem, retrieved examples, solver prompt,
 raw solution, verifier critique, final solution, and runtime metadata.
+
+Use real MATH retrieval with the mock LLM:
+
+```bash
+python -m src.agents.pipeline \
+  --problem "Find all real x such that x^2 - 5x + 6 = 0." \
+  --top_k 3 \
+  --mock_llm \
+  --retrieval_source math \
+  --output outputs/smoke_math_retrieval.json
+```
+
+If the MATH dataset or FAISS index is missing, run:
+
+```bash
+source scripts/setup_env.sh
+python scripts/download_data.py
+python -m src.retrieval.build_index
+```
+
+The real-retrieval output JSON includes `runtime_metadata.retrieval_metadata`
+with the dataset path, FAISS index path, metadata path, whether the index was
+built during the run, and the number of retrieved examples.
 
 Control the self-critique loop:
 
