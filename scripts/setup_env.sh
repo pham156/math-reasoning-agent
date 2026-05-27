@@ -26,6 +26,10 @@ export TMPDIR=$CACHE_DIR/tmp
 
 export PYTHONPATH=$PROJECT_ROOT:${PYTHONPATH:-}
 
+if [[ -n "${CONDA_PREFIX:-}" ]]; then
+  export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
+fi
+
 mkdir -p \
   "$MODEL_DIR" \
   "$DATA_DIR" \

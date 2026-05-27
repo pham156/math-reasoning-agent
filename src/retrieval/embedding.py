@@ -6,16 +6,25 @@ from src.core.config import cache_dir, model_dir
 
 
 def resolve_embedding_model(path_or_id: str | Path | None = None) -> str:
-    candidate = Path(path_or_id or model_dir("all-MiniLM-L6-v2"))
+    if path_or_id is None:
+        candidate = model_dir("all-MiniLM-L6-v2")
+        return str(candidate) if candidate.exists() else "sentence-transformers/all-MiniLM-L6-v2"
+
+    raw = str(path_or_id)
+    candidate = Path(raw)
     if candidate.exists():
         return str(candidate)
-    return str(path_or_id or "sentence-transformers/all-MiniLM-L6-v2")
+    if "/" in raw and not raw.startswith("/"):
+        return raw
+    if candidate.name == "all-MiniLM-L6-v2":
+        return "sentence-transformers/all-MiniLM-L6-v2"
+    return raw
 
 
 def load_embedding_model(path_or_id: str | Path | None = None):
     from sentence_transformers import SentenceTransformer
 
-    return SentenceTransformer(resolve_embedding_model(path_or_id), cache_folder=str(cache_dir() / "huggingface"))
+    return SentenceTransformer(resolve_embedding_model(path_or_id), cache_folder=str(cache_dir() / "huggingface"), device="cpu")
 
 
 def embedding_text(example: dict, mode: str = "problem_strategy") -> str:
