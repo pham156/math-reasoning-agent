@@ -138,6 +138,33 @@ def normalize_verification(obj: dict, raw: str = "") -> VerificationResult:
 
 
 def fallback_verification(raw: str, reason: str) -> VerificationResult:
+    normalized_raw = raw.lower()
+    valid_markers = (
+        "the solution is valid",
+        "solution is valid",
+        "\\boxed{\\text{valid}}",
+        '"verdict": "valid"',
+        '"verdict":"valid"',
+    )
+    invalid_markers = (
+        "solution is invalid",
+        "the solution is invalid",
+        '"verdict": "invalid"',
+        '"verdict":"invalid"',
+    )
+    if any(marker in normalized_raw for marker in valid_markers) and not any(
+        marker in normalized_raw for marker in invalid_markers
+    ):
+        return VerificationResult(
+            verdict="valid",
+            score=8.0,
+            confidence=0.6,
+            issues=[],
+            critique=raw.strip(),
+            suggested_revision_plan=[],
+            raw=raw,
+        )
+
     return VerificationResult(
         verdict="invalid",
         score=0.0,

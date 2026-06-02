@@ -38,12 +38,16 @@ def build_verifier_prompt(problem: str, solution: str, expected_answer: str | No
         "4. incomplete proofs: missing existence/uniqueness, boundary cases, final answer not established.\n"
         "5. answer mismatch: final answer does not match the argument or known expected answer.\n\n"
         "Be fair: do not mark a solution invalid for minor style issues if the math is complete.\n"
-        "Return only a JSON object matching this schema. Do not include markdown.\n\n"
+        "Return exactly one raw JSON object. Start with { and end with }. Do not include markdown, LaTeX, prose, or code fences.\n\n"
         f"{json.dumps(VERIFIER_JSON_SCHEMA, indent=2)}\n\n"
+        "Example for a complete correct solution:\n"
+        '{"verdict":"valid","score":9,"confidence":0.9,"issues":[],"algebra_checks":["checked core algebra"],'
+        '"logical_checks":["checked implications"],"missing_steps":[],"critique":"The solution is mathematically complete.",'
+        '"suggested_revision_plan":[]}\n\n'
         f"Problem:\n{problem}\n"
         f"{answer_block}\n"
         f"Proposed solution:\n{solution}\n\n"
-        "JSON:"
+        "Raw JSON object only:"
     )
 
 

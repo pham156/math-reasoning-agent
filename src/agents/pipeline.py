@@ -5,6 +5,7 @@ import json
 import time
 import os
 import sys
+import traceback
 from pathlib import Path
 
 from src.core.config import data_dir, model_dir, output_dir, print_storage_summary, project_root
@@ -399,7 +400,9 @@ def run_pipeline(
             )
         except Exception as exc:
             solver_error = f"{type(exc).__name__}: {exc}"
-            raise RuntimeError(f"Real model generation failed: {solver_error}") from exc
+            raise RuntimeError(
+                f"Real model generation failed: {solver_error}\n{traceback.format_exc()}"
+            ) from exc
 
         model_metadata.update(generation_metadata)
         model_metadata["llm_mode"] = "real"

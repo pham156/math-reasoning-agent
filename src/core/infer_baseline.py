@@ -84,6 +84,25 @@ def runtime_model_metadata(model_path: str, tokenizer=None, model=None) -> dict:
     return metadata
 
 
+def move_inputs_to_device(inputs, device) -> dict:
+    moved = inputs.to(device)
+    return {key: value for key, value in moved.items()}
+
+
+def build_generation_inputs(tokenizer, prompt: str, device) -> dict:
+    if getattr(tokenizer, "chat_template", None):
+        rendered = tokenizer.apply_chat_template(
+            [{"role": "user", "content": prompt}],
+            add_generation_prompt=True,
+            return_tensors="pt",
+            return_dict=True,
+        )
+        if hasattr(rendered, "items"):
+            return move_inputs_to_device(rendered, device)
+        return {"input_ids": rendered.to(device)}
+    return move_inputs_to_device(tokenizer(prompt, return_tensors="pt"), device)
+
+
 def build_prompt(problem: str) -> str:
     return (
         "You are a careful mathematical reasoning assistant. "
@@ -103,15 +122,7 @@ def generate_solution(
 
     tokenizer, model = load_causal_lm(model_path)
     prompt = prompt or build_prompt(problem)
-    if getattr(tokenizer, "chat_template", None):
-        input_ids = tokenizer.apply_chat_template(
-            [{"role": "user", "content": prompt}],
-            add_generation_prompt=True,
-            return_tensors="pt",
-        ).to(model_input_device(model))
-        inputs = {"input_ids": input_ids}
-    else:
-        inputs = tokenizer(prompt, return_tensors="pt").to(model_input_device(model))
+    inputs = build_generation_inputs(tokenizer, prompt, model_input_device(model))
     do_sample = temperature > 0
     generation_kwargs = {
         "max_new_tokens": max_new_tokens,
@@ -139,15 +150,7 @@ def generate_solution_with_metadata(
     tokenizer, model = load_causal_lm(model_path)
     metadata = runtime_model_metadata(model_path, tokenizer=tokenizer, model=model)
     prompt = prompt or build_prompt(problem)
-    if getattr(tokenizer, "chat_template", None):
-        input_ids = tokenizer.apply_chat_template(
-            [{"role": "user", "content": prompt}],
-            add_generation_prompt=True,
-            return_tensors="pt",
-        ).to(model_input_device(model))
-        inputs = {"input_ids": input_ids}
-    else:
-        inputs = tokenizer(prompt, return_tensors="pt").to(model_input_device(model))
+    inputs = build_generation_inputs(tokenizer, prompt, model_input_device(model))
     do_sample = temperature > 0
     generation_kwargs = {
         "max_new_tokens": max_new_tokens,
