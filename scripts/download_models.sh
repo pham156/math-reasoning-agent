@@ -21,10 +21,10 @@ esac
 
 echo "Confirmed model downloads point to scratch."
 
-if command -v huggingface-cli >/dev/null 2>&1; then
-  HF_CLI=(huggingface-cli download)
-elif command -v hf >/dev/null 2>&1; then
+if command -v hf >/dev/null 2>&1; then
   HF_CLI=(hf download)
+elif command -v huggingface-cli >/dev/null 2>&1; then
+  HF_CLI=(huggingface-cli download)
 else
   echo "ERROR: neither huggingface-cli nor hf was found. Install huggingface_hub in the active environment." >&2
   exit 1
@@ -43,9 +43,7 @@ for model_id in "${models[@]}"; do
   echo "Downloading $model_id -> $target"
   mkdir -p "$target"
   "${HF_CLI[@]}" "$model_id" \
-    --local-dir "$target" \
-    --local-dir-use-symlinks False \
-    --cache-dir "$HF_HOME/hub"
+    --local-dir "$target"
 done
 
 echo "All model downloads completed under $MODEL_DIR"
