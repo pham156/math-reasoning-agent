@@ -8,7 +8,11 @@ import sys
 from pathlib import Path
 
 from src.core.config import data_dir, model_dir, output_dir, print_storage_summary, project_root
-from src.core.infer_baseline import generate_solution
+from src.core.infer_baseline import (
+    generate_solution_with_metadata,
+    local_model_metadata,
+    model_files_present,
+)
 from src.retrieval.context import build_solver_prompt
 from src.retrieval.math_taxonomy import enrich_example
 from src.retrieval.retrieve import retrieve_examples
@@ -51,9 +55,70 @@ def resolve_output_path(path: str | Path) -> Path:
     return output_dir(requested)
 
 
-def model_available(path: str | Path) -> bool:
-    model_path = Path(path)
-    return model_path.exists() and any((model_path / name).exists() for name in ("config.json", "tokenizer_config.json"))
+MODEL_ALIASES = {
+    "qwen2.5-math-7b-instruct": "Qwen2.5-Math-7B-Instruct",
+    "qwen2.5-math-7b": "Qwen2.5-Math-7B",
+    "deepseek-math-7b-instruct": "deepseek-math-7b-instruct",
+    "all-minilm-l6-v2": "all-MiniLM-L6-v2",
+}
+
+
+def scratch_models_dir() -> Path:
+    return model_dir("")
+
+
+def resolve_model_path(requested_model_path: str | Path) -> tuple[Path, dict]:
+    requested = Path(requested_model_path).expanduser()
+    requested_abs = requested.resolve() if requested.exists() else requested
+    candidates = [requested]
+
+    project_models = project_root() / "models"
+    if requested.is_absolute() and project_models in (requested, *requested.parents):
+        candidates.append(scratch_models_dir() / requested.name)
+
+    alias_name = MODEL_ALIASES.get(requested.name.lower())
+    if alias_name:
+        candidates.append(scratch_models_dir() / alias_name)
+
+    models_root = scratch_models_dir()
+    if models_root.exists():
+        for child in models_root.iterdir():
+            if child.is_dir() and child.name.lower() == requested.name.lower():
+                candidates.append(child)
+
+    seen = set()
+    unique_candidates = []
+    for candidate in candidates:
+        key = str(candidate)
+        if key not in seen:
+            unique_candidates.append(candidate)
+            seen.add(key)
+
+    effective = next((candidate for candidate in unique_candidates if model_files_present(candidate)), unique_candidates[-1])
+    metadata = {
+        "requested_model_path": str(requested_abs),
+        "effective_model_path": str(effective),
+        "candidate_model_paths": [str(path) for path in unique_candidates],
+        "model_storage_root": str(models_root),
+        "path_was_remapped_to_scratch": str(effective) != str(requested),
+    }
+    metadata.update(local_model_metadata(effective))
+    return effective, metadata
+
+
+def missing_model_error(model_metadata: dict) -> RuntimeError:
+    candidates = "\n".join(f"  - {path}" for path in model_metadata["candidate_model_paths"])
+    return RuntimeError(
+        "Real LLM mode requested, but model files are missing or incomplete.\n"
+        f"Requested path: {model_metadata['requested_model_path']}\n"
+        f"Effective path: {model_metadata['effective_model_path']}\n"
+        "Expected at least config.json plus tokenizer_config.json or tokenizer.json.\n"
+        f"Checked candidates:\n{candidates}\n\n"
+        "Download models to scratch, then rerun:\n"
+        "  source scripts/setup_env.sh\n"
+        "  bash scripts/download_models.sh\n\n"
+        "For a no-model smoke test, add --mock_llm."
+    )
 
 
 def normalize_retrieved_examples(examples: list[dict]) -> list[dict]:
@@ -304,30 +369,49 @@ def run_pipeline(
     retrieved_examples = normalize_retrieved_examples(retrieved_examples_raw)
     solver_prompt = build_solver_prompt(problem, retrieved_examples, max_examples=top_k)
 
+    effective_model_path, model_metadata = resolve_model_path(model_path)
     llm_mode = "mock" if mock_llm else "real"
     fallback_reason = None
-    if not mock_llm and not model_available(model_path):
-        llm_mode = "mock"
-        fallback_reason = f"Model path is unavailable or incomplete: {model_path}"
+    verifier_error = None
+    solver_error = None
 
     if llm_mode == "mock":
         raw_solution = mock_generate(problem, solver_prompt)
         verification = mock_verify(problem, raw_solution)
+        model_metadata.update(
+            {
+                "llm_mode": "mock",
+                "solver_model_loaded": False,
+                "verifier_model_loaded": False,
+            }
+        )
     else:
+        if not model_files_present(effective_model_path):
+            raise missing_model_error(model_metadata)
+
         try:
-            raw_solution = generate_solution(
+            raw_solution, generation_metadata = generate_solution_with_metadata(
                 problem=problem,
-                model_path=model_path,
+                model_path=str(effective_model_path),
                 max_new_tokens=max_new_tokens,
                 temperature=temperature,
                 prompt=solver_prompt,
             )
-            verification = PromptVerifierBackend(model_path=model_path).verify(problem, raw_solution)
         except Exception as exc:
-            llm_mode = "mock"
-            fallback_reason = f"Real model execution failed: {type(exc).__name__}: {exc}"
-            raw_solution = mock_generate(problem, solver_prompt)
+            solver_error = f"{type(exc).__name__}: {exc}"
+            raise RuntimeError(f"Real model generation failed: {solver_error}") from exc
+
+        model_metadata.update(generation_metadata)
+        model_metadata["llm_mode"] = "real"
+        model_metadata["solver_model_loaded"] = True
+
+        try:
+            verification = PromptVerifierBackend(model_path=str(effective_model_path)).verify(problem, raw_solution)
+            model_metadata["verifier_model_loaded"] = True
+        except Exception as exc:
+            verifier_error = f"{type(exc).__name__}: {exc}"
             verification = mock_verify(problem, raw_solution)
+            model_metadata["verifier_model_loaded"] = False
 
     final_solution = raw_solution
     end = time.time()
@@ -339,13 +423,18 @@ def run_pipeline(
         "raw_solution": raw_solution,
         "verifier_critique": verification.to_dict(),
         "final_solution": final_solution,
+        "model_metadata": model_metadata,
         "runtime_metadata": {
             "runtime_sec": end - start,
             "llm_mode": llm_mode,
             "fallback_reason": fallback_reason,
+            "solver_error": solver_error,
+            "verifier_error": verifier_error,
             "retrieval_source": retrieval_metadata.get("actual_source"),
             "retrieval_metadata": retrieval_metadata,
-            "model_path": model_path,
+            "requested_model_path": model_path,
+            "effective_model_path": str(effective_model_path),
+            "model_metadata": model_metadata,
             "top_k": top_k,
             "candidate_k": candidate_k,
             "max_new_tokens": max_new_tokens,

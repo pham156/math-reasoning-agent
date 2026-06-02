@@ -248,8 +248,8 @@ Pipeline:
 ## First End-to-End Smoke Test
 
 This is the frozen minimal vertical slice. It works from the project root and
-falls back to a deterministic mock LLM if the 7B model or ML dependencies are
-not available yet. If the FAISS/MATH index is unavailable, it uses a tiny toy
+supports a deterministic mock LLM for testing without model weights. If the
+FAISS/MATH index is unavailable in `--retrieval_source auto`, it uses a tiny toy
 retrieval set.
 
 ```bash
@@ -260,6 +260,7 @@ python -m src.agents.pipeline \
   --problem "Find all real x such that x^2 - 5x + 6 = 0." \
   --top_k 3 \
   --max_new_tokens 512 \
+  --mock_llm \
   --output outputs/smoke_test.json
 ```
 
@@ -269,19 +270,39 @@ Relative paths under `outputs/` are saved under scratch:
 $OUTPUT_DIR/smoke_test.json
 ```
 
-Force mock mode explicitly:
+Run real Qwen2.5-Math-7B-Instruct inference after downloading the model to
+scratch:
 
 ```bash
 python -m src.agents.pipeline \
   --problem "Find all real x such that x^2 - 5x + 6 = 0." \
   --top_k 3 \
+  --retrieval_source math \
+  --model_path "$PROJECT_ROOT/models/qwen2.5-math-7b-instruct" \
   --max_new_tokens 512 \
-  --mock_llm \
-  --output outputs/smoke_test.json
+  --output outputs/smoke_real_qwen.json
 ```
 
 The saved JSON includes the input problem, retrieved examples, solver prompt,
-raw solution, verifier critique, final solution, and runtime metadata.
+raw solution, verifier critique, final solution, runtime metadata, and model
+metadata. Real mode exits with a clear error if model files are missing instead
+of silently falling back to mock mode. The `$PROJECT_ROOT/models/...` path is
+accepted for convenience; the pipeline resolves it to `$MODEL_DIR/...` under
+scratch before loading model weights.
+
+Submit the real-Qwen smoke test on Gilbreth:
+
+```bash
+sbatch scripts/run_real_qwen_smoke.slurm
+```
+
+Optional overrides:
+
+```bash
+MODEL_PATH="$MODEL_DIR/Qwen2.5-Math-7B-Instruct" \
+OUTPUT_PATH="outputs/smoke_real_qwen.json" \
+sbatch scripts/run_real_qwen_smoke.slurm
+```
 
 Use real MATH retrieval with the mock LLM:
 
