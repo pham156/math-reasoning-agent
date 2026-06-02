@@ -9,6 +9,8 @@
 - 2026-06-02T05:08:54-04:00 [CODE] Implemented real Qwen2.5-Math-7B-Instruct generation path using `tokenizer.apply_chat_template` when available, `device_map="auto"`, and CUDA bf16 when supported.
 - 2026-06-02T05:08:54-04:00 [CODE] Added `scripts/run_real_qwen_smoke.slurm` for one-GPU Gilbreth smoke testing with logs in home and outputs in scratch.
 - 2026-06-02T05:10:00-04:00 [TOOL] Submitted real Qwen smoke Slurm job `10940001` via `scripts/run_real_qwen_smoke.slurm`; initial state is `PENDING` on `a100-40gb` with reason `AssocGrpGRES`.
+- 2026-06-02T05:11:00-04:00 [USER] User provided preferred Gilbreth directives: account `ai-forge`, partition `a100-80gb`, QoS `standby`, one GPU, 64G memory, 4-hour limit.
+- 2026-06-02T05:11:00-04:00 [TOOL] Canceled job `10940001`, updated `scripts/run_real_qwen_smoke.slurm`, and submitted corrected job `10940015`; it is `PENDING` on `a100-80gb` under `ai-forge/standby` with reason `Priority`.
 
 [DISCOVERIES]
 - 2026-06-02T05:08:54-04:00 [TOOL] `/scratch/gilbreth/pham156/math-reasoning-agent/models` currently has no Qwen model files, so real Qwen smoke cannot complete until `bash scripts/download_models.sh` downloads weights to scratch.

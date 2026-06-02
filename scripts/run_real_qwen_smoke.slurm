@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=math_qwen_smoke
-#SBATCH --account=csso
-#SBATCH --partition=a100-40gb
+#SBATCH --account=ai-forge
+#SBATCH --partition=a100-80gb
+#SBATCH --qos=standby
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
-#SBATCH --time=00:30:00
+#SBATCH --time=04:00:00
 #SBATCH --output=/home/pham156/math-reasoning-agent/logs/%x_%j.out
 #SBATCH --error=/home/pham156/math-reasoning-agent/logs/%x_%j.err
 
