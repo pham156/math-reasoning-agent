@@ -13,6 +13,13 @@ def model_files_present(model_path: str | Path) -> bool:
     )
 
 
+def adapter_files_present(adapter_path: str | Path | None) -> bool:
+    if adapter_path is None:
+        return False
+    path = Path(adapter_path)
+    return path.exists() and (path / "adapter_config.json").exists()
+
+
 def local_model_metadata(model_path: str | Path) -> dict:
     path = Path(model_path)
     files = sorted(item.name for item in path.iterdir()) if path.exists() else []
@@ -24,7 +31,7 @@ def local_model_metadata(model_path: str | Path) -> dict:
     }
 
 
-def load_causal_lm(model_path: str):
+def load_causal_lm(model_path: str, adapter_path: str | Path | None = None):
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -45,6 +52,15 @@ def load_causal_lm(model_path: str):
         cache_dir=str(cache_dir() / "huggingface"),
         trust_remote_code=True,
     )
+    if adapter_path is not None:
+        if not adapter_files_present(adapter_path):
+            raise FileNotFoundError(
+                f"LoRA adapter files are missing or incomplete at {adapter_path}. "
+                "Expected adapter_config.json and adapter weights."
+            )
+        from peft import PeftModel
+
+        model = PeftModel.from_pretrained(model, str(adapter_path))
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     return tokenizer, model
@@ -59,7 +75,7 @@ def model_input_device(model):
     return getattr(model, "device", next(model.parameters()).device)
 
 
-def runtime_model_metadata(model_path: str, tokenizer=None, model=None) -> dict:
+def runtime_model_metadata(model_path: str, tokenizer=None, model=None, adapter_path: str | Path | None = None) -> dict:
     import torch
 
     metadata = local_model_metadata(model_path)
@@ -72,6 +88,8 @@ def runtime_model_metadata(model_path: str, tokenizer=None, model=None) -> dict:
             if torch.cuda.is_available() and torch.cuda.is_bf16_supported()
             else "auto",
             "device_map": "auto",
+            "adapter_path": str(adapter_path) if adapter_path else None,
+            "adapter_files_present": adapter_files_present(adapter_path) if adapter_path else None,
         }
     )
     if tokenizer is not None:
@@ -117,10 +135,11 @@ def generate_solution(
     max_new_tokens: int = 1024,
     temperature: float = 0.2,
     prompt: str | None = None,
+    adapter_path: str | Path | None = None,
 ) -> str:
     import torch
 
-    tokenizer, model = load_causal_lm(model_path)
+    tokenizer, model = load_causal_lm(model_path, adapter_path=adapter_path)
     prompt = prompt or build_prompt(problem)
     inputs = build_generation_inputs(tokenizer, prompt, model_input_device(model))
     do_sample = temperature > 0
@@ -144,11 +163,12 @@ def generate_solution_with_metadata(
     max_new_tokens: int = 1024,
     temperature: float = 0.2,
     prompt: str | None = None,
+    adapter_path: str | Path | None = None,
 ) -> tuple[str, dict]:
     import torch
 
-    tokenizer, model = load_causal_lm(model_path)
-    metadata = runtime_model_metadata(model_path, tokenizer=tokenizer, model=model)
+    tokenizer, model = load_causal_lm(model_path, adapter_path=adapter_path)
+    metadata = runtime_model_metadata(model_path, tokenizer=tokenizer, model=model, adapter_path=adapter_path)
     prompt = prompt or build_prompt(problem)
     inputs = build_generation_inputs(tokenizer, prompt, model_input_device(model))
     do_sample = temperature > 0
@@ -174,9 +194,18 @@ def main() -> None:
     parser.add_argument("--problem", required=True)
     parser.add_argument("--max_new_tokens", type=int, default=1024)
     parser.add_argument("--temperature", type=float, default=0.2)
+    parser.add_argument("--adapter_path", default=None)
     args = parser.parse_args()
 
-    print(generate_solution(args.problem, args.model_path, args.max_new_tokens, args.temperature))
+    print(
+        generate_solution(
+            args.problem,
+            args.model_path,
+            args.max_new_tokens,
+            args.temperature,
+            adapter_path=args.adapter_path,
+        )
+    )
 
 
 if __name__ == "__main__":

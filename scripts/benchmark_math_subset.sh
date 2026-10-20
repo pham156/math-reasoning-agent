@@ -10,7 +10,7 @@ LIMIT=${LIMIT:-20}
 SPLIT=${SPLIT:-test}
 EXPERIMENT_NAME=${EXPERIMENT_NAME:-math_subset_$(date +%Y%m%d_%H%M%S)}
 
-python "$PROJECT_ROOT/src/evaluate_agent.py" \
+python -m src.evaluation.evaluate_agent \
   --split "$SPLIT" \
   --limit "$LIMIT" \
   --modes "$MODES" \

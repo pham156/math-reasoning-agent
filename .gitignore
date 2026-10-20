@@ -8,12 +8,46 @@ __pycache__/
 
 # Local environments
 env/
+/env
 .venv/
 venv/
+.env
+.env.*
+!.env.example
+
+# Optional external source checkout and its local convenience symlink
+/.vendor-CS557/
+/open-r1
 
 # Logs and experiment outputs kept in home, not source control
 logs/
 *.log
+*.out
+*.err
+
+# Generated job state and experiment artifacts; keep scripts/*.slurm versioned
+/jobs/
+/job_outputs/
+/result/
+/results/
+/runs/
+/figures/
+wandb/
+lightning_logs/
+submission.json
+*_submission.json
+
+# Compiled paper exports and generated figures; keep LaTeX and plotting code
+/docs/midterm/*.pdf
+/docs/midterm/*.zip
+/docs/midterm/preview_page_*.png
+/docs/midterm/figures/
+*.aux
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
 
 # Notebook checkpoints
 .ipynb_checkpoints/
@@ -29,3 +63,14 @@ data/
 outputs/
 cache/
 checkpoints/
+
+# Also ignore scratch symlinks themselves, not just directory contents
+/models
+/data
+/outputs
+/cache
+/checkpoints
+
+# Container runtime images (keep container recipes)
+*.sif
+*.squashfs

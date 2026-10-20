@@ -3,21 +3,52 @@ from __future__ import annotations
 import re
 
 
-BOX_PATTERNS = (
-    r"\\boxed\s*\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}",
-    r"\\fbox\s*\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}",
-)
+BOX_COMMANDS = (r"\boxed", r"\fbox")
+
+
+def _extract_balanced_braced(text: str, command: str) -> list[str]:
+    answers = []
+    start = 0
+    while True:
+        command_pos = text.find(command, start)
+        if command_pos < 0:
+            break
+        brace_pos = text.find("{", command_pos + len(command))
+        if brace_pos < 0:
+            break
+        depth = 0
+        for pos in range(brace_pos, len(text)):
+            char = text[pos]
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    answers.append(text[brace_pos + 1 : pos].strip())
+                    start = pos + 1
+                    break
+        else:
+            break
+    return answers
 
 
 def extract_boxed_answer(text: str) -> str | None:
-    for pattern in BOX_PATTERNS:
-        matches = re.findall(pattern, text, flags=re.DOTALL)
+    for command in BOX_COMMANDS:
+        matches = _extract_balanced_braced(text, command)
         if matches:
             return matches[-1].strip()
+        unclosed = re.findall(rf"{re.escape(command)}\s*\{{([^{{}}\n\r$\\\]]+)", text, flags=re.DOTALL)
+        if unclosed:
+            return unclosed[-1].strip()
     return None
 
 
 def extract_final_answer(text: str) -> str:
+    if "####" in text:
+        final = text.rsplit("####", 1)[-1].strip()
+        if final:
+            return final.splitlines()[0].strip()
+
     boxed = extract_boxed_answer(text)
     if boxed:
         return boxed
@@ -39,20 +70,32 @@ def extract_final_answer(text: str) -> str:
 def normalize_answer(answer: str) -> str:
     text = answer.strip()
     text = extract_boxed_answer(text) or text
+    text = re.sub(r"\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}", r"\1/\2", text)
     replacements = {
         r"\left": "",
         r"\right": "",
+        r"\Big": "",
+        r"\big": "",
         r"\,": "",
         r"\!": "",
         r"\ ": "",
+        r"\{": "{",
+        r"\}": "}",
         "$": "",
     }
     for old, new in replacements.items():
         text = text.replace(old, new)
     text = re.sub(r"\\text\s*\{([^{}]*)\}", r"\1", text)
     text = re.sub(r"\\mathrm\s*\{([^{}]*)\}", r"\1", text)
+    text = re.sub(r"(?<=\d),(?=\d{3}(?:\D|$))", "", text)
+    text = re.sub(r"\b(?:and|or)\b", ",", text, flags=re.IGNORECASE)
+    text = text.replace(";", ",")
     text = re.sub(r"\s+", "", text)
     text = text.strip(" .,:;")
+    if "," in text:
+        parts = [part.strip("{}()[] ") for part in text.split(",") if part.strip("{}()[] ")]
+        if parts:
+            text = ",".join(sorted(parts))
     return text.lower()
 
 

@@ -82,3 +82,31 @@ def build_solver_prompt(problem: str, examples: list[dict], max_examples: int = 
         f"Target problem:\n{problem}\n\n"
         "Write a concise but complete step-by-step solution. End with a clearly marked final answer.\n\nSolution:"
     )
+
+
+def format_compact_hint(example: dict, index: int) -> str:
+    strategies = example.get("strategies", []) or ["unknown"]
+    topics = example.get("topics", []) or [example.get("type", "unknown")]
+    theorem_patterns = example.get("theorem_patterns", []) or []
+    strategy = strategies[0]
+    theorem_text = f"; theorem pattern: {theorem_patterns[0]}" if theorem_patterns else ""
+    return (
+        f"Hint {index}: category={example.get('type', 'unknown')}; level={example.get('level', 'unknown')}; "
+        f"topic={topics[0]}; strategy={strategy}{theorem_text}; "
+        f"similarity={example.get('similarity_score', example.get('score', 0.0)):.3f}. "
+        "Use this only as a high-level direction, not as a solution template."
+    )
+
+
+def build_compact_solver_prompt(problem: str, examples: list[dict], max_examples: int = 4) -> str:
+    selected = examples[:max_examples]
+    signals = format_strategy_summary(problem, selected)
+    hints = "\n".join(format_compact_hint(example, idx) for idx, example in enumerate(selected, start=1))
+    return (
+        "You are a careful mathematical reasoning assistant.\n"
+        "Use the compact retrieval hints only to choose a strategy. Do not copy a retrieved solution; none is provided.\n\n"
+        f"{signals}\n\n"
+        f"Compact retrieval hints:\n{hints}\n\n"
+        f"Target problem:\n{problem}\n\n"
+        "Write a concise but complete step-by-step solution. End with a clearly marked final answer.\n\nSolution:"
+    )

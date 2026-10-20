@@ -1,0 +1,111 @@
+\RequirePackage[T1]{fontenc}
+\documentclass[conference]{IEEEtran}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
+\usepackage{cite}
+
+\title{Verifiable-Reward Reinforcement Learning\\for Mathematical Reasoning: A Controlled Study}
+\author{\IEEEauthorblockN{Project Team}
+\IEEEauthorblockA{Purdue University\\Midterm Project Update}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We investigate reinforcement learning with verifiable rewards for mathematical reasoning, comparing GRPO and Dr.~GRPO with an unchanged language model and supervised fine-tuning. Starting from Qwen2.5-Math-1.5B, we train on competition mathematics and evaluate answer accuracy, sampled solution coverage, and learning dynamics. Both RL methods improve development and external benchmark performance, while the initial supervised setup does not show the same gains. Learning-rate experiments improve GRPO performance across two seeds, whereas the tested regularization changes do not. Reward, entropy, and sampling analyses provide complementary evidence about adaptation. These findings motivate further training, reward comparisons, and controlled ablations.
+\end{abstract}
+
+\section{Introduction and Research Questions}
+Final-answer rewards make mathematics suitable for reinforcement learning (RL). Unlike supervised fine-tuning (SFT), which imitates reference solutions, RL updates a policy from its own sampled solutions and their correctness. Using Qwen2.5-Math~\cite{qwen} and MATH~\cite{math}, we ask how post-training improves answer reliability, how much sampling coverage changes, and which fine-tuning settings preserve useful exploration.
+
+We compare accuracy, exploration, and response efficiency because higher training reward alone does not distinguish reliable answers from changes in sampling or response style.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/rl_dynamics_and_exploration.pdf}
+\caption{GRPO and Dr.~GRPO at LR $10^{-6}$, seed 0. (a) Training correctness reward: trailing mean of four rollout observations. (b) Pass@$k$ from eight samples on 100 development problems; the frozen baseline appears only here. (c) Logged token entropy: trailing mean over eight updates. Training reward and entropy are not held-out accuracy or certified reasoning quality.}
+\label{fig:dynamics}
+\end{figure*}
+
+\section{Experimental Design}
+\subsection{Model, Data, and Reward}
+All runs start from the Qwen2.5-Math-1.5B \emph{base} model. RL and SFT update the full model; an unchanged copy provides the no-training baseline.
+
+We use 512 MATH training problems at Levels~3--5 and a separate, category/level-balanced development set of 300 problems. Methods share the same data split and prompt format. RL prompts contain problems without reference solutions; SFT uses reference solutions as training targets.
+
+External evaluation uses MATH-500 and a fixed 100-problem GSM8K test subset~\cite{gsm8k}, with no normalized-text overlap with the selected training problems.
+
+For a problem $x$, generated response $y$, and reference answer $a$, the reward is
+\begin{equation}
+R(x,y)=\mathbf{1}\!\left[\operatorname{equiv}(\operatorname{extract}(y),a)\right].
+\end{equation}
+The shared grader extracts the final answer and checks normalized or mathematical equivalence. Correct answers receive reward one; incorrect or missing answers receive zero. Current RL runs use correctness alone, without format or length rewards.
+
+\subsection{RL Fine-Tuning and Matched Training}
+GRPO reinforces solutions using rewards relative to other responses for the same problem~\cite{grpo}. Dr.~GRPO changes advantage scaling and loss normalization~\cite{drgrpo}. We focus on these two methods; Dr.~GRPO had the highest observed MATH-500 accuracy among the other variants in our initial screening.
+
+Multiple solutions provide relative rewards for model updates; identical-reward groups provide no relative learning signal.
+
+The initial RL runs complete one training pass with 128 updates under shared settings. Separate GRPO ablations vary learning rate, KL regularization, or clipping bounds one factor at a time. All methods use the same step-by-step prompt and final-answer convention.
+
+\subsection{Evaluation}
+Evaluation uses a common prompt, grader, generation budget, and stopping rule. Eight responses on 100 fixed development problems estimate pass@$k$: the chance of a correct solution within $k$ samples. We track greedy accuracy separately from sampling coverage, alongside training reward, entropy, response length, and truncation.
+
+\section{Completed Progress and Preliminary Results}
+\subsection{Accuracy, Exploration, and Length}
+GRPO gains 27.3 development accuracy points (Table~\ref{tab:main}). Pass@8 rises from 79\% without RL to 89\% with GRPO and 90\% with Dr.~GRPO (Fig.~\ref{fig:dynamics}b). Training entropy declines (panel c), while held-out coverage improves: local policy concentration and solution coverage are distinct measurements.
+
+\begin{table}[ht]
+\caption{Fine-tuning comparison: greedy accuracy (\%) under a common generation budget. Dev: 300 held-out MATH-train problems. RL rows use the original shared learning rate; dashes indicate benchmarks not evaluated for SFT.}
+\label{tab:main}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrr}
+\toprule
+Model & Dev & MATH-500 & GSM8K-100\\
+\midrule
+No fine-tuning & 45.0 & 34.8 & 38.0\\
+SFT & 40.3 & --- & ---\\
+GRPO & 72.3 & 67.4 & 73.0\\
+Dr.~GRPO & 68.3 & 65.2 & 75.0\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Greedy truncations decline from 95/300 without RL to 7 with GRPO and 4 with Dr.~GRPO. Completion and sampled coverage improve; final answers do not certify intermediate reasoning.
+
+\subsection{Fine-Tuning Comparison}
+Table~\ref{tab:main} compares SFT and RL from the same model and training problems. The initial SFT setup does not reproduce the RL gains; it is data-matched, not compute-matched, and has not received the same tuning study.
+
+SFT optimizes reference-trajectory likelihood; RL accepts alternative responses with correct answers. The result favors the tested RL settings, not a general claim against imitation. Additional SFT training and tuning will test whether this gap persists.
+
+\subsection{Learning Rate and Regularization}
+GRPO LR $3\times10^{-6}$ improves development accuracy from 72.3\% to 75.0\% in seed 0 and from 70.3\% to 73.3\% in seed 1. Two-seed means are 71.3\% and 74.2\%; this supports the higher rate, not a definitive optimum. Higher-LR models have no external benchmark scores.
+
+For seed 0 at the original LR, KL penalties score 70.3--71.0\% and alternative clipping bounds score 68.7--70.7\%, below the 72.3\% control. Penalties reduce fixed-prefix reference-policy drift without improving accuracy; clipping is rarely active in the control. These results support keeping the original regularization settings while extending training.
+
+\subsection{External Benchmark Transfer}
+Original GRPO gains 32.6 points on MATH-500; Dr.~GRPO gains 30.4 points. Both improve GSM8K-100 (Table~\ref{tab:main}), despite training only on MATH. GRPO's mean MATH-500 response length falls from 1,665 to 663 tokens. Higher accuracy with shorter completions motivates measuring token efficiency alongside correctness, while retaining common stopping and generation budgets.
+
+The training curves in Fig.~\ref{fig:dynamics} show rising reward and declining entropy, indicating concentration on training contexts. Held-out pass@$k$ measures a different outcome: reaching correct solutions through sampling. GRPO's stronger greedy score and Dr.~GRPO's slightly higher pass@8 therefore need not imply one universal ranking. Tracking length and truncation helps distinguish concise completion from lost successful paths.
+
+\section{Future Work}
+Following the experiment plan, we will train for more updates on larger MATH subsets and repeat runs across seeds. We will extend the algorithm comparison beyond GRPO and Dr.~GRPO and further tune both RL and SFT under shared evaluation conditions.
+
+Reward experiments will compare correctness-only training with format bonuses and length penalties while reporting answer accuracy separately. Controlled ablations will examine learning rate, KL regularization, clipping, rollout count, and training-data difficulty or coverage. Learning curves, pass@$k$, response lengths, and benchmark transfer will show which changes improve accuracy and efficiency as training continues.
+
+Checkpoint evaluations will compare early gains with later behavior before combining promising settings.
+
+For reward comparisons, the optimizer and training data will remain fixed. We will record correctness and added reward components separately, checking whether gains in the optimized reward translate into better answers rather than only formatting changes or shorter responses.
+
+\begin{thebibliography}{00}
+\bibitem{qwen} A.~Yang \emph{et al.}, ``Qwen2.5-Math technical report: Toward mathematical expert model via self-improvement,'' arXiv:2409.12122, 2024.
+\bibitem{math} D.~Hendrycks \emph{et al.}, ``Measuring mathematical problem solving with the MATH dataset,'' in \emph{NeurIPS Datasets and Benchmarks}, 2021.
+\bibitem{gsm8k} K.~Cobbe \emph{et al.}, ``Training verifiers to solve math word problems,'' arXiv:2110.14168, 2021.
+\bibitem{grpo} Z.~Shao \emph{et al.}, ``DeepSeekMath: Pushing the limits of mathematical reasoning in open language models,'' arXiv:2402.03300, 2024.
+\bibitem{drgrpo} Z.~Liu \emph{et al.}, ``Understanding R1-Zero-like training: A critical perspective,'' arXiv:2503.20783, 2025.
+\end{thebibliography}
+\end{document}
