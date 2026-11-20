@@ -12,9 +12,9 @@ echo "  MODEL_DIR=$MODEL_DIR"
 echo "  HF_HOME=$HF_HOME"
 
 case "$SCRATCH_ROOT" in
-  /scratch/gilbreth/*) ;;
+  /scratch/*) ;;
   *)
-    echo "ERROR: SCRATCH_ROOT is not under /scratch/gilbreth: $SCRATCH_ROOT" >&2
+    echo "ERROR: SCRATCH_ROOT is not under /scratch: $SCRATCH_ROOT" >&2
     exit 1
     ;;
 esac

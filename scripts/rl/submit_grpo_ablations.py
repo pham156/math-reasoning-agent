@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import subprocess
 
+from src.core.config import log_dir, scratch_root
 from src.training.rl.ablation_controls import CASES, CONTROL, check_saved, settings
 
 
@@ -17,7 +18,7 @@ def main():
     parser.add_argument("--submit", action="store_true")
     args = parser.parse_args()
     root = args.root.resolve()
-    scratch = Path("/scratch/gilbreth/pham156/math-reasoning-agent")
+    scratch = scratch_root()
     if not root.is_relative_to(scratch / "outputs"):
         raise ValueError("All artifacts must be under project scratch outputs")
     if (root / "submission.json").exists():
@@ -62,7 +63,8 @@ def main():
         if dependency:
             command.append("--dependency=afterok:" + dependency)
         if array:
-            command.extend(["--array=" + array, "--output=/home/pham156/math-reasoning-agent/logs/%A_%a_%x.out", "--error=/home/pham156/math-reasoning-agent/logs/%A_%a_%x.err"])
+            logs = log_dir()
+            command.extend(["--array=" + array, f"--output={logs}/%A_%a_%x.out", f"--error={logs}/%A_%a_%x.err"])
         if phase == "summary":
             command.extend(["--time=00:15:00", "--mem=8G", "--cpus-per-task=1"])
         env = dict(os.environ, RL_ABLATION_ROOT=str(root), RL_RUN_LABEL=run["label"], RL_PHASE=phase, RL_MODEL_PATH=str(Path(run.get("run_root", root)) / "final_model"))

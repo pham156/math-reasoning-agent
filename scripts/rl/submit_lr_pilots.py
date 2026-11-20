@@ -9,6 +9,9 @@ from pathlib import Path
 import subprocess
 
 
+from src.core.config import scratch_root
+
+
 ALGORITHMS = ("grpo", "dr_grpo", "dapo_style", "gspo")
 
 
@@ -34,9 +37,10 @@ def main():
     parser.add_argument("--learning_rates", nargs="+", type=float, default=[2e-7, 5e-7, 1e-6])
     args = parser.parse_args()
     root = Path(args.root).resolve()
-    if not root.is_relative_to(Path("/scratch/gilbreth")):
+    if not str(root).startswith("/scratch/"):
         raise ValueError("Tuning root must be in scratch")
-    prior = Path("/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/pilot_20261013_000313")
+    scratch = scratch_root()
+    prior = scratch / "outputs/rl_1p5b_study/pilot_20261013_000313"
     controls = prior.parent / "controls_exploration_20261014"
     names = list(dict.fromkeys(args.algorithms))
     rates = grid_rates(args.learning_rates)
@@ -50,7 +54,7 @@ def main():
             raise ValueError("Original resume gate did not pass")
         old = prior / "pilot" / name
         config = json.loads((old / "run_config.json").read_text())["arguments"]
-        scratch = Path("/scratch/gilbreth/pham156/math-reasoning-agent")
+        scratch = scratch_root()
         for key, value in {"model_path": str(scratch / "models/Qwen2.5-Math-1.5B"), "dataset_dir": str(scratch / "data/MATH"), "split_dir": str(scratch / "data/rl_1p5b_pilot_v1")}.items():
             if config.get(key) != value:
                 raise ValueError(f"Reused data/model mismatch: {name}/{key}")

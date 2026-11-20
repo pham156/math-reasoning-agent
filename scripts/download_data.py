@@ -22,7 +22,7 @@ def main() -> None:
     print(f"Dataset: {args.dataset}")
     print(f"Saving dataset to: {output_dir}")
 
-    if "/scratch/gilbreth/" not in str(output_dir):
+    if not str(output_dir).startswith("/scratch/"):
         raise ValueError(f"Refusing to write dataset outside scratch: {output_dir}")
 
     from datasets import load_dataset

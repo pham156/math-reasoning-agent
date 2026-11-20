@@ -4,8 +4,21 @@ import os
 from pathlib import Path
 
 
-DEFAULT_PROJECT_ROOT = Path("/home/pham156/math-reasoning-agent")
-DEFAULT_SCRATCH_ROOT = Path("/scratch/gilbreth/pham156/math-reasoning-agent")
+def _detect_default_project_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+def _detect_default_scratch_root() -> Path:
+    user = os.environ.get("USER", "vo43")
+    for base in (f"/scratch/scholar/{user}", f"/scratch/gilbreth/{user}", f"/scratch/{user}"):
+        candidate = Path(base)
+        if candidate.exists():
+            return candidate / "math-reasoning-agent"
+    return Path(f"/scratch/scholar/{user}/math-reasoning-agent")
+
+
+DEFAULT_PROJECT_ROOT = _detect_default_project_root()
+DEFAULT_SCRATCH_ROOT = _detect_default_scratch_root()
 
 
 def project_root() -> Path:
@@ -21,9 +34,9 @@ def scratch_root() -> Path:
 
 def ensure_scratch_path(path: str | Path, name: str = "path") -> Path:
     resolved = Path(path).expanduser().resolve()
-    scratch_prefix = Path("/scratch/gilbreth").resolve()
+    scratch_prefix = Path("/scratch").resolve()
     if scratch_prefix not in (resolved, *resolved.parents):
-        raise ValueError(f"{name} must be under /scratch/gilbreth, got: {resolved}")
+        raise ValueError(f"{name} must be under /scratch, got: {resolved}")
     return resolved
 
 
@@ -66,4 +79,4 @@ def print_storage_summary() -> None:
         if label in {"models", "data", "outputs", "cache", "SCRATCH_ROOT"}:
             ensure_scratch_path(path, label)
         print(f"{label}: {path}")
-    print("Confirmed: large files are configured under /scratch/gilbreth; code/logs are in home.")
+    print("Confirmed: large files are configured under /scratch; code/logs are in home.")

@@ -2,7 +2,9 @@
 
 set -euo pipefail
 
-cd /home/pham156/math-reasoning-agent
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+cd "${PROJECT_ROOT:-$SCRIPT_DIR}"
+source scripts/setup_env.sh >/dev/null
 
 submit() {
   local label=$1
@@ -36,6 +38,6 @@ cat >&2 <<EOF
 
 Training job: $TRAIN_JOB
 Final comparison job: $COMPARE_JOB
-Adapter: /scratch/gilbreth/pham156/math-reasoning-agent/outputs/qwen2.5-math-7b-math-lora
-Summary: /scratch/gilbreth/pham156/math-reasoning-agent/outputs/qlora_eval/compare_qlora.md
+Adapter: $OUTPUT_DIR/qwen2.5-math-7b-math-lora
+Summary: $OUTPUT_DIR/qlora_eval/compare_qlora.md
 EOF

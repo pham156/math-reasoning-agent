@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Dry-run by default; explicitly pass --submit to queue the staged pilot matrix.
 set -euo pipefail
-cd /home/pham156/math-reasoning-agent
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+cd "${PROJECT_ROOT:-$SCRIPT_DIR}"
 source scripts/setup_env.sh >/dev/null
 MODE="${1:---dry-run}"
 if [[ "$MODE" != --dry-run && "$MODE" != --submit ]]; then
