@@ -14,7 +14,7 @@ import random
 import time
 
 from src.core.config import data_dir, ensure_scratch_path, model_dir, output_dir, print_storage_summary
-from src.evaluation.answer import extract_final_answer
+from src.evaluation.answer import extract_committed_answer, extract_final_answer
 from src.training.grpo.train import summarize_history, write_json
 from src.training.rl.methods import METHODS, check_method_config, method_settings
 
@@ -43,11 +43,24 @@ def smoke_trainer_class():
     return SmokeTrainer
 
 
+STRICT_GRADER = "closed-boxed-v1"
+
+
 @lru_cache(maxsize=4096)
 def grade_solution(text: str, answer: str) -> float:
+    """Historical lenient grader; it defines the pilot reward, so its behavior is frozen."""
+    return answers_match(extract_final_answer(text), answer)
+
+
+@lru_cache(maxsize=4096)
+def grade_solution_strict(text: str, answer: str) -> float:
+    """Credit only a closed final \\boxed{} answer (STRICT_GRADER); used for reporting."""
+    return answers_match(extract_committed_answer(text) or "", answer)
+
+
+def answers_match(prediction: str, answer: str) -> float:
     from math_verify import parse, verify
 
-    prediction = extract_final_answer(text)
     if not prediction.strip() or not answer.strip():
         return 0.0
     if "".join(prediction.split()) == "".join(answer.split()):
