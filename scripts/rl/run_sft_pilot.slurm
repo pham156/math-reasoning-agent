@@ -11,8 +11,8 @@
 #SBATCH --error=logs/%j_%x.err
 
 set -euo pipefail
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-cd "${PROJECT_ROOT:-$SCRIPT_DIR}"
+PROJECT_ROOT="${PROJECT_ROOT:-${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." 2>/dev/null && pwd)}}"
+cd "$PROJECT_ROOT"
 source scripts/setup_env.sh >/dev/null
 
 ROOT="${SFT_STUDY_ROOT:-$OUTPUT_DIR/rl_1p5b_study/sft_pilot}"

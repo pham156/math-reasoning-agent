@@ -12,8 +12,8 @@
 #SBATCH --error=logs/%A_%a_%x.err
 
 set -euo pipefail
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-cd "${PROJECT_ROOT:-$SCRIPT_DIR}"
+PROJECT_ROOT="${PROJECT_ROOT:-${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." 2>/dev/null && pwd)}}"
+cd "$PROJECT_ROOT"
 source scripts/setup_env.sh >/dev/null
 
 ALGORITHMS=(grpo dr_grpo dapo_style gspo)
@@ -33,4 +33,5 @@ bash scripts/rl/smoke_python.sh -m src.training.rl.pilot \
   --output_dir "$RUN_DIR" \
   --max_steps 128 \
   --segment_seconds 9000 \
+  --eval_samples 20 \
   --resume
