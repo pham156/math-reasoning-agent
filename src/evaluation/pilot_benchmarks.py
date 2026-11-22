@@ -11,7 +11,7 @@ from src.core.config import data_dir, ensure_scratch_path
 from src.training.grpo.train import write_json
 
 
-NAMES = ("baseline", "grpo", "dr_grpo", "dapo_style", "gspo")
+NAMES = ("baseline", "grpo", "dr_grpo", "dapo_style", "gspo", "sft")
 BENCHMARKS = {"math500": 500, "gsm8k100": 100}
 AIME_BENCHMARKS = ("aime2025", "aime2026")
 AIME_SHARD_SIZE = 30
