@@ -908,9 +908,7 @@ Download benchmark datasets to scratch:
 python scripts/download_benchmarks.py
 ```
 
-This saves local copies under `$DATA_DIR` for MATH, MATH-500, GSM8K, AIME 2024,
-AIME 2025, and miniF2F Lean4. GPQA is attempted as an optional dataset, but the
-official Hugging Face dataset is gated and requires authenticated access.
+This saves local copies under `$DATA_DIR` for MATH, MATH-500, GSM8K, AIME 2024, the legacy `math-ai/aime25` AIME 2025 copy, the pinned MathArena AIME 2025/2026 sets, and miniF2F Lean4. GPQA is attempted as an optional dataset, but the official Hugging Face dataset is gated and requires authenticated access. Each new download resolves the dataset's current Hub commit, downloads exactly that commit, and records it in `<target>.download.json`; the manifest (`$DATA_DIR/benchmark_manifest.json`, written even when a required download fails) lists each revision, or `unrecorded` for copies saved before revisions were kept. AIME 2024 was held before the September 2024 Qwen2.5-Math release, so it may be in that model's training data and is not a held-out set.
 
 MATH-500:
 
@@ -1232,6 +1230,30 @@ Freeze MATH-500 test (all500) and a seed42 random GSM8K test subset (100) with `
 Submit `sbatch --export=ALL,RL_BENCHMARK_ROOT="$RL_BENCHMARK_ROOT" scripts/rl/run_external_benchmarks.slurm`. Thirty independent unthrottled standby tasks evaluate the frozen base and four original1e-6/128-update RL models: five100-problem MATH-500 shards plus one100-problem GSM8K shard per model. The common evaluator preserves FP32 parameters/BF16 compute, exact training chat prompts, greedy decoding,3000-token cap, endoftext/im_end stopping, and exact/Math-Verify grading. No retrieval, verifier, sampling selection, or new training. JSONL/configs stay scratch; logs are job-ID-first in home. The evaluator safely pauses after3.5hours; rerun any incomplete shard with the same environment/array index before summarizing.
 
 Submit `scripts/rl/summarize_external_benchmarks.slurm` with the same export and `--dependency=afterok:ARRAY_JOB_ID`. It rejects incomplete shards or changed benchmark/prompt hashes and writes `summary.{json,md}` under the output root: accuracy, tokens, runtime, truncation, paired fixes/breaks, and type/level breakdowns. Do not use these scores for learning-rate/checkpoint selection. Results are single-training-seed diagnostics, not final multi-seed method rankings.
+
+### AIME 2025/2026 Contamination Check
+
+AIME 2025 and AIME 2026 (all 30 problems each, AIME I and II) were held in February 2025 and February 2026, after the September 2024 Qwen2.5-Math release, so the base model cannot have seen them during training. They come from MathArena (`MathArena/aime_2025`, `MathArena/aime_2026`, CC BY-NC-SA 4.0) at revisions pinned in `src/evaluation/benchmarks.py`; MathArena's AIME 2025 problem 2 wording differs from the older `math-ai/aime25` copy that the legacy 7B/QLoRA `aime2025` preset still uses; `scripts/download_benchmarks.py` fetches both and labels them. Answers are integers 0-999, so grading uses the same exact/Math-Verify grader with little ambiguity. These are report-only sets: never use them for learning-rate, checkpoint, or method selection.
+
+Freeze both years with `bash scripts/rl/smoke_python.sh -m src.evaluation.pilot_benchmarks "$RL_AIME_ROOT" --suite aime --prepare`, where `RL_AIME_ROOT=$OUTPUT_DIR/rl_1p5b_study/aime_<date>`. Preparation caches the pinned revisions under `$DATA_DIR/MathArena_aime{2025,2026}/`, validates exactly 30 problems with indices 1-30 and integer answers, rejects normalized-text overlap with the 512 training and 300 development problems and between years, and refuses to change existing `aime{2025,2026}_frozen.json` files. Each frozen file sets `shard_size` 30, so every model/benchmark/mode is one resumable shard.
+
+Evaluate with the common-stop evaluator. Greedy mode gives one deterministic answer per problem. Sampled mode now accepts benchmark files and `--num_samples` (default 8, unchanged for the historical development diagnostics); use 16 for AIME, because one greedy run on 30 problems moves 3.3 points per problem. Sampling keeps temperature 1/top-p 1/top-k 0, the 3,000-token cap, FP32 parameters/BF16 compute, and per-problem seeds; each frozen AIME file sets `seed_offset` (year × 1000), so problem k of 2025 and of 2026 get different seeds. Every run, including `--prepare_only`, refuses a prompt whose 3,000-token budget would exceed the model's 4,096-token context. Run the commands below for each model name (`baseline`, `grpo`, `dr_grpo`, `dapo_style`, `gspo`) and each year; `--model_path` evaluates another checkpoint under one of those names.
+
+```bash
+for year in 2025 2026; do
+  bash scripts/rl/smoke_python.sh -m src.evaluation.pilot_exploration --pilot_root "$RL_PILOT_ROOT" --comparison_root "$RL_COMPARISON_ROOT" --name grpo --shard 0 --benchmark_file "$RL_AIME_ROOT/aime${year}_frozen.json" --output_dir "$RL_AIME_ROOT/aime${year}" --mode greedy
+  bash scripts/rl/smoke_python.sh -m src.evaluation.pilot_exploration --pilot_root "$RL_PILOT_ROOT" --comparison_root "$RL_COMPARISON_ROOT" --name grpo --shard 0 --benchmark_file "$RL_AIME_ROOT/aime${year}_frozen.json" --output_dir "$RL_AIME_ROOT/aime${year}" --mode sampled --num_samples 16
+done
+bash scripts/rl/smoke_python.sh -m src.evaluation.pilot_benchmarks "$RL_AIME_ROOT" --suite aime --models baseline grpo dr_grpo dapo_style gspo --modes greedy sampled
+```
+
+The summary writes `aime_summary.{json,md}` under `$RL_AIME_ROOT` for each year and for both years pooled (60 problems): mean accuracy over all samples (avg@16 in sampled mode, accuracy in greedy mode), strict accuracy (see below), pass@1/4/8/16, problems solved at least once, truncation rate, correct answers without `\boxed` (to audit fallback-extraction credit), generated tokens, and the per-problem accuracy change against the untouched baseline with improved/worsened problem IDs, under both graders. Its 95% interval is a seeded 10,000-resample paired bootstrap over problems; it does not capture training-seed variation. It rejects incomplete shards, changed frozen inputs, mismatched prompts, and inconsistent sample counts. The model's 4,096-token context limits the answer budget to 3,000 tokens, so expect more truncation than on MATH and read the truncation rate alongside accuracy.
+
+### Strict Re-Grading
+
+The historical grader (`grade_solution`, also the RL reward) falls back to the last line of an output without `\boxed{}`, then lets Math-Verify find a matching value in it, so an unfinished sentence such as "We get 70 so far, then subtract" counts as correct, and so does a box cut off by truncation (`\boxed{3`). Its behavior is frozen so past rewards and results stay reproducible. `grade_solution_strict` (grader `closed-boxed-v1`) credits only the last closed `\boxed{}`, the format the system prompt requests, compared with the same exact/Math-Verify check; it is used for reporting, not training. Both graders still mark answers split across several boxes (for example `x=\boxed{2}`, `y=\boxed{3}`) wrong, so the re-grade counts outputs with more than one distinct boxed value.
+
+Re-grade saved outputs without a GPU using `bash scripts/rl/smoke_python.sh -m src.evaluation.regrade <output_dir> --output <report.json>`. It searches the directory recursively for `pilot_dev` JSONL (one response per line) and `pilot_exploration` shards (`candidates` lists), only reads them, and prints a Markdown table per run: stored, lenient, and strict accuracy; lenient-only credits; truncated outputs and how many each grader credits; multi-box outputs; and the change against the sibling `baseline` run under each grader. Stored results that differ from today's lenient grader are split into those explained by the `####` heading fix and unexplained ones; nonzero unexplained mismatches mean grader or package drift. Because inputs are only read, copies of the scratch outputs can be audited off-cluster with any Python environment that has `math-verify==0.8.0`.
 
 ### Lean Formal-Proof Feasibility Run
 

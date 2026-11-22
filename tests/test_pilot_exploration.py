@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 from types import SimpleNamespace
 
-from src.evaluation.pilot_exploration import pass_at_k, stop_ids
+from src.evaluation.pilot_exploration import MAX_NEW_TOKENS, check_context, pass_at_k, pass_k_values, sample_seed, seed_rule, stop_ids
 from src.evaluation.summarize_pilot_exploration import read_rows
 
 
@@ -18,6 +18,27 @@ class ExplorationTests(unittest.TestCase):
         self.assertAlmostEqual(pass_at_k(8, 2, 4), 1 - 15 / 70)
         with self.assertRaises(ValueError):
             pass_at_k(8, 1, 9)
+
+    def test_pass_k_values_keep_historical_eight_sample_report(self):
+        self.assertEqual(pass_k_values(8), [1, 4, 8])
+        self.assertEqual(pass_k_values(16), [1, 4, 8, 16])
+        self.assertEqual(pass_k_values(1), [1])
+
+    def test_default_seed_rule_is_historical(self):
+        # Resuming refuses any config change, so the dev/MATH-500/GSM8K rule must stay verbatim.
+        self.assertEqual(seed_rule(), "100000 + source_index for each sampled group")
+        self.assertEqual(sample_seed(7), 100007)
+        self.assertEqual(MAX_NEW_TOKENS, 3000)
+
+    def test_seed_offset_separates_benchmarks(self):
+        self.assertNotEqual(sample_seed(1, 2025000), sample_seed(1, 2026000))
+        self.assertEqual(sample_seed(1, 2025000), 2125001)
+        self.assertEqual(seed_rule(2025000), "100000 + 2025000 + source_index for each sampled group")
+
+    def test_context_check(self):
+        check_context([100, 1096], 4096)
+        with self.assertRaises(ValueError):
+            check_context([100, 1097], 4096)
 
     def test_stop_union(self):
         tokenizer = SimpleNamespace(eos_token_id=151643, unk_token_id=None, convert_tokens_to_ids=lambda _: 151645)

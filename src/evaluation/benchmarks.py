@@ -429,3 +429,83 @@ def load_benchmark_examples(
             start_index=start_index,
         )
     raise ValueError(f"Unknown benchmark preset {benchmark!r}.")
+
+
+# Post-release competitions for contamination checks. Qwen2.5-Math was released in
+# September 2024; both contests were held afterwards. Revisions are pinned because
+# MathArena may revise statements (its AIME 2025 problem 2 differs from math-ai/aime25).
+MATHARENA_AIME = {
+    "aime2025": {"year": "2025", "dataset_id": "MathArena/aime_2025", "revision": "c94da77eb22bbd6439e62a323bec18493a421302", "held": "February 2025"},
+    "aime2026": {"year": "2026", "dataset_id": "MathArena/aime_2026", "revision": "d61f486805306e6e6b5913504c07763a99e1b112", "held": "February 2026"},
+}
+
+
+def matharena_aime_rows(raw_rows: list[dict], benchmark: str) -> list[dict]:
+    """Validate one MathArena AIME year and convert it to standard benchmark rows."""
+    if len(raw_rows) != 30:
+        raise ValueError(f"{benchmark}: expected 30 AIME problems, got {len(raw_rows)}")
+    rows = []
+    for raw in raw_rows:
+        index = int(raw["problem_idx"])
+        problem = str(raw["problem"]).strip()
+        answer = raw["answer"]
+        if isinstance(answer, bool) or not isinstance(answer, int) or not 0 <= answer <= 999:
+            raise ValueError(f"{benchmark} problem {index}: AIME answers are integers 0-999, got {answer!r}")
+        if not problem:
+            raise ValueError(f"{benchmark} problem {index}: empty statement")
+        topics = raw.get("problem_type") or []
+        rows.append(
+            _standard_row(
+                benchmark=benchmark,
+                index=index,
+                source_id=f"{benchmark}-{index}",
+                problem=problem,
+                solution="",
+                answer=str(answer),
+                category=f"AIME {MATHARENA_AIME[benchmark]['year']}",
+                level="AIME",
+                metadata={"problem_type": list(topics)},
+            )
+        )
+    if sorted(row["problem_index"] for row in rows) != list(range(1, 31)):
+        raise ValueError(f"{benchmark}: problem_idx must be exactly 1..30")
+    return sorted(rows, key=lambda row: row["problem_index"])
+
+
+def load_matharena_aime(benchmark: str) -> tuple[list[dict], dict]:
+    """Load a pinned MathArena AIME revision, caching it under $DATA_DIR."""
+    import json
+
+    from datasets import load_dataset, load_from_disk
+
+    spec = MATHARENA_AIME[benchmark]
+    local_path = data_dir(f"MathArena_{benchmark}")
+    record_path = local_path / "download_record.json"
+    if local_path.exists():
+        record = json.loads(record_path.read_text())
+        if record["revision"] != spec["revision"]:
+            raise ValueError(f"{local_path} holds revision {record['revision']}, expected {spec['revision']}")
+        dataset = load_from_disk(str(local_path / "dataset"))
+        source = "local_disk"
+    else:
+        dataset = load_dataset(spec["dataset_id"], revision=spec["revision"])
+        local_path.mkdir(parents=True)
+        dataset.save_to_disk(str(local_path / "dataset"))
+        record_path.write_text(json.dumps({"dataset_id": spec["dataset_id"], "revision": spec["revision"]}, indent=2) + "\n")
+        source = "huggingface"
+    rows = matharena_aime_rows(list(dataset["train"]), benchmark)
+    metadata = asdict(
+        BenchmarkMetadata(
+            benchmark=benchmark,
+            display_name=f"AIME {spec['year']}",
+            dataset_id=spec["dataset_id"],
+            split="train",
+            limit=len(rows),
+            sample_seed=0,
+            sampling="all",
+            source=source,
+            note=f"All 30 AIME {spec['year']} I/II problems (held {spec['held']}), after the Qwen2.5-Math release.",
+        )
+    )
+    metadata.update(revision=spec["revision"], license="cc-by-nc-sa-4.0", answer_format="integer 0-999")
+    return rows, metadata

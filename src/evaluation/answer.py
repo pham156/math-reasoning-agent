@@ -43,22 +43,39 @@ def extract_boxed_answer(text: str) -> str | None:
     return None
 
 
-def extract_final_answer(text: str) -> str:
-    if "####" in text:
-        final = text.rsplit("####", 1)[-1].strip()
-        if final:
-            return final.splitlines()[0].strip()
+def closed_boxed_answers(text: str) -> list[str]:
+    """Every balanced \\boxed{...} in order; unclosed (cut-off) boxes are ignored."""
+    return [answer for answer in _extract_balanced_braced(text, r"\boxed") if answer]
 
+
+def extract_committed_answer(text: str) -> str | None:
+    """Strict extraction: the last closed \\boxed{...}, the format the system prompt requests.
+
+    Unlike extract_final_answer there is no unclosed-box, '####', phrase, or last-line
+    fallback. An output cut off inside a box still yields an earlier closed box, if any.
+    """
+    answers = closed_boxed_answers(text)
+    return answers[-1] if answers else None
+
+
+def extract_final_answer(text: str) -> str:
     boxed = extract_boxed_answer(text)
     if boxed:
         return boxed
+
+    lines = [line.strip() for line in text.strip().splitlines() if line.strip()]
+    # GSM8K places "#### <answer>" on the final line. Only honor the marker there so
+    # Markdown headings such as "#### Step 1" are never mistaken for the answer.
+    if lines and "####" in lines[-1]:
+        final = lines[-1].rsplit("####", 1)[-1].strip()
+        if final:
+            return final
 
     final_patterns = (
         r"final answer\s*[:\-]\s*(.+)$",
         r"answer\s*[:\-]\s*(.+)$",
         r"therefore\s*,?\s*(.+)$",
     )
-    lines = [line.strip() for line in text.strip().splitlines() if line.strip()]
     tail = "\n".join(lines[-5:])
     for pattern in final_patterns:
         match = re.search(pattern, tail, flags=re.IGNORECASE | re.DOTALL)
