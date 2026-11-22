@@ -2,11 +2,11 @@
 #SBATCH --job-name=sft_pilot
 #SBATCH --account=scholar
 #SBATCH --partition=gpu
-#SBATCH --constraint=a40
+##SBATCH --constraint=a40
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
-#SBATCH --time=04:00:00
+#SBATCH --time=03:59:00
 #SBATCH --output=logs/%j_%x.out
 #SBATCH --error=logs/%j_%x.err
 

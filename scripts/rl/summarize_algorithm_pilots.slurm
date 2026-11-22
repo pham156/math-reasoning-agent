@@ -2,6 +2,7 @@
 #SBATCH --job-name=rl_summary
 #SBATCH --account=scholar
 #SBATCH --partition=cpu
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=8G
 #SBATCH --time=00:30:00

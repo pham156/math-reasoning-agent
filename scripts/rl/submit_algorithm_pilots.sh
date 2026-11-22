@@ -23,6 +23,9 @@ fi
 if [[ -n "${SLURM_QOS:-}" ]]; then
   SBATCH_OPTS+=(--qos="$SLURM_QOS")
 fi
+if [[ -n "${SLURM_TIME:-}" ]]; then
+  SBATCH_OPTS+=(--time="$SLURM_TIME")
+fi
 
 export RL_STUDY_ROOT="${RL_STUDY_ROOT:-$OUTPUT_DIR/rl_1p5b_study/pilot_$(date +%Y%m%d_%H%M%S)}"
 if [[ "$RL_STUDY_ROOT" != "$OUTPUT_DIR/"* ]]; then
@@ -57,5 +60,5 @@ for SEGMENT in 1 2 3; do
   echo "Pilot segment $SEGMENT: $JOB (afterok:$PARENT)"
   PARENT="$JOB"
 done
-SUMMARY=$(sbatch --parsable --dependency="afterany:$PARENT" scripts/rl/summarize_algorithm_pilots.slurm)
+SUMMARY=$(sbatch "${SBATCH_OPTS[@]}" --parsable --dependency="afterany:$PARENT" scripts/rl/summarize_algorithm_pilots.slurm)
 echo "Summary: ${SUMMARY%%;*} (afterany:$PARENT)"
