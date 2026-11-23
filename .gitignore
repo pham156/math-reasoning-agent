@@ -74,3 +74,8 @@ checkpoints/
 # Container runtime images (keep container recipes)
 *.sif
 *.squashfs
+
+# Local agent configuration, skills, and scratch state (local to machine only)
+.agent/
+/.agent/
+
