@@ -1,0 +1,17 @@
+\begin{table*}[t]
+\centering
+\caption{Matched GRPO/Dr.~GRPO comparison with no-RL and SFT controls. Greedy accuracy (\%); sampled metrics use 100 fixed problems and eight responses. RL: LR $10^{-6}$,128 updates. SFT external/sampling entries were not evaluated. MATH tokens are mean greedy completion length.}
+\label{tab:methods}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrr}
+\toprule
+Method & Dev300 & MATH-500 & GSM8K-100 & Sampled@1 & Pass@8 & MATH tokens\\
+\midrule
+No RL & 45.0 & 34.8 & 38.0 & 29.38 & 79.0 & 1665\\
+SFT & 40.3 & --- & --- & --- & --- & ---\\
+GRPO & 72.3 & 67.4 & 73.0 & 55.00 & 89.0 & 663\\
+Dr.~GRPO & 68.3 & 65.2 & 75.0 & 52.62 & 90.0 & 646\\
+\bottomrule
+\end{tabular}
+\end{table*}

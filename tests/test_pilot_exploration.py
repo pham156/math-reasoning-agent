@@ -4,11 +4,19 @@ from pathlib import Path
 import tempfile
 from types import SimpleNamespace
 
-from src.evaluation.pilot_exploration import MAX_NEW_TOKENS, check_context, pass_at_k, pass_k_values, sample_seed, seed_rule, stop_ids
+from src.evaluation.pilot_exploration import MAX_NEW_TOKENS, check_context, decoding_settings, pass_at_k, pass_k_values, sample_seed, seed_rule, stop_ids
 from src.evaluation.summarize_pilot_exploration import read_rows
 
 
 class ExplorationTests(unittest.TestCase):
+    def test_decoding_controls_preserve_defaults_and_reject_invalid_values(self):
+        self.assertEqual(decoding_settings("greedy"), (0.0, 3000))
+        self.assertEqual(decoding_settings("sampled"), (1.0, 3000))
+        self.assertEqual(decoding_settings("sampled", .7, 512), (.7, 512))
+        for mode, temperature, cap in (("greedy", .7, 3000), ("sampled", 0, 3000), ("sampled", float("nan"), 3000), ("sampled", 1, 3001)):
+            with self.assertRaises(ValueError):
+                decoding_settings(mode, temperature, cap)
+
     def test_pass_estimator(self):
         self.assertEqual(pass_at_k(8, 0, 8), 0)
         self.assertEqual(pass_at_k(8, 8, 1), 1)

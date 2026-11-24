@@ -31,6 +31,25 @@ def training_points(history, metric):
     return points
 
 
+def mixed_group_points(history, rollouts):
+    logged = training_points(history, "frac_reward_zero_std")
+    if len(rollouts) != 2048:
+        raise ValueError("Expected32 complete64-response rollout batches")
+    points = []
+    for i, (step, zero_fraction) in enumerate(logged):
+        if not 0 <= zero_fraction <= 1:
+            raise ValueError("Invalid zero-variance group fraction")
+        batch = rollouts[i * 64:(i + 1) * 64]
+        groups = [batch[j:j + 4] for j in range(0, 64, 4)]
+        if any(len({r["problem"] for r in g}) != 1 or any(r["reward"] not in (0, 1) for r in g) for g in groups):
+            raise ValueError("Mixed-group plot requires binary correctness and complete prompt groups")
+        mixed = sum(0 < sum(r["reward"] for r in g) < 4 for g in groups) / 16
+        if not math.isclose(mixed, 1 - zero_fraction, abs_tol=1e-12):
+            raise ValueError("Logged mixed fraction differs from raw correctness groups")
+        points.append((step, mixed))
+    return points
+
+
 def paired_lr_points(summary):
     points = {}
     for seed in (0, 1):
@@ -73,8 +92,9 @@ def main():
                          "axes.spines.top": False, "axes.spines.right": False,
                          "axes.linewidth": 0.6, "xtick.labelsize": 7, "ytick.labelsize": 7,
                          "pdf.fonttype": 42, "savefig.dpi": 300})
-    fig, axes = plt.subplots(1, 3, figsize=(7.16, 2.08))
-    fig.subplots_adjust(left=0.069, right=0.988, bottom=0.22, top=0.72, wspace=0.38)
+    fig, grid = plt.subplots(1, 3, figsize=(7.16, 2.2))
+    axes = grid.ravel()
+    fig.subplots_adjust(left=0.065, right=0.985, bottom=0.22, top=0.77, wspace=0.42)
     exported = []
     for name, (label, color, style, marker) in METHODS.items():
         if name != "baseline":

@@ -1,0 +1,16 @@
+\begin{table*}[t]
+\centering
+\caption{Longer GRPO training on the same 512 problems at LR $3\cdot 10^{-6}$. Greedy 100 and sampled metrics use the same problems; train tokens are cumulative. Only measured checkpoints are tabulated; all accuracy metrics are percentages.}
+\label{tab:duration}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrr}
+\toprule
+Updates & Greedy300 & Greedy100 & Sampled@1 & Pass@8 & Train M tokens\\
+\midrule
+128 & 75.0 & 79.0 & 65.50 & 91.0 & 1.90\\
+256 & 73.3 & 78.0 & 68.00 & 91.0 & 3.53\\
+512 & 69.0 & 74.0 & 73.25 & 90.0 & 6.54\\
+\bottomrule
+\end{tabular}
+\end{table*}

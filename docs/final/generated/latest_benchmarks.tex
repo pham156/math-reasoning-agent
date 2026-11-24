@@ -1,0 +1,21 @@
+\begin{table*}[t]
+\centering
+\caption{Completed greedy external evaluation at LR $3\cdot10^{-6}$, 3000-token cap; step 256 reconstructed with matching rollout and training-metric prefixes. Runtime is observed mean per problem, not a hardware-controlled speed benchmark.}
+\label{tab:latest}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrr}
+\toprule
+Benchmark & Checkpoint & n & Accuracy & Tokens & Seconds & Truncated\\
+\midrule
+math500 & base\_no\_rl & 500 & 34.8 & 1665 & 81.7 & 209\\
+math500 & step128 & 500 & 68.8 & 665 & 33.1 & 14\\
+math500 & step256 & 500 & 69.6 & 673 & 33.3 & 17\\
+math500 & step512 & 500 & 70.4 & 626 & 30.6 & 20\\
+gsm8k100 & base\_no\_rl & 100 & 38.0 & 1747 & 86.2 & 52\\
+gsm8k100 & step128 & 100 & 74.0 & 386 & 19.5 & 1\\
+gsm8k100 & step256 & 100 & 75.0 & 435 & 21.9 & 3\\
+gsm8k100 & step512 & 100 & 85.0 & 332 & 16.0 & 0\\
+\bottomrule
+\end{tabular}
+\end{table*}

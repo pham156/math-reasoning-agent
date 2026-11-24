@@ -25,7 +25,15 @@ logs/
 *.out
 *.err
 
-# Generated job state and experiment artifacts; keep scripts/*.slurm versioned
+# Cluster-specific launchers and local assistant state
+*.slurm
+/.agent/
+/.agents/
+/.codex/
+/.claude/
+/AGENTS.md
+
+# Generated job state and raw experiment artifacts
 /jobs/
 /job_outputs/
 /result/
@@ -37,11 +45,12 @@ lightning_logs/
 submission.json
 *_submission.json
 
-# Compiled paper exports and generated figures; keep LaTeX and plotting code
-/docs/midterm/*.pdf
-/docs/midterm/*.zip
-/docs/midterm/preview_page_*.png
-/docs/midterm/figures/
+# Curated report PDFs, sources, figures and Overleaf archives are versioned.
+# Exclude only previews, raw evidence snapshots and TeX intermediates.
+/docs/**/preview_*.png
+/docs/**/evidence.json
+/docs/**/followup_evidence.json
+/docs/**/plotted_data.csv
 *.aux
 *.bbl
 *.blg

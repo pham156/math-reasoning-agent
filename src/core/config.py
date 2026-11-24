@@ -4,8 +4,8 @@ import os
 from pathlib import Path
 
 
-DEFAULT_PROJECT_ROOT = Path("/home/pham156/math-reasoning-agent")
-DEFAULT_SCRATCH_ROOT = Path("/scratch/gilbreth/pham156/math-reasoning-agent")
+DEFAULT_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_SCRATCH_ROOT = Path("/scratch/gilbreth") / os.environ.get("USER", "unknown") / "math-reasoning-agent"
 
 
 def project_root() -> Path:

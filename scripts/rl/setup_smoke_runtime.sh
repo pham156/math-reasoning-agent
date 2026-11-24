@@ -1,17 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd /home/pham156/math-reasoning-agent
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.."
 source scripts/setup_env.sh
 export APPTAINER_CACHEDIR="$CACHE_DIR/apptainer"
 export APPTAINER_TMPDIR="$CACHE_DIR/apptainer_tmp"
 mkdir -p "$SCRATCH_ROOT/containers" "$SCRATCH_ROOT/env" "$APPTAINER_CACHEDIR" "$APPTAINER_TMPDIR" "$CACHE_DIR/pip"
 IMAGE="$SCRATCH_ROOT/containers/rl-smoke-python311.sif"
 if [[ ! -f "$IMAGE" ]]; then
-  if [[ -f /scratch/gilbreth/pham156/pdf_tools/python311.sif ]]; then
-    cp /scratch/gilbreth/pham156/pdf_tools/python311.sif "$IMAGE"
-  else
-    apptainer build "$IMAGE" containers/rl-smoke.def
-  fi
+  apptainer build "$IMAGE" containers/rl-smoke.def
 fi
 if [[ ! -x "$SCRATCH_ROOT/env/rl-smoke/bin/python" ]]; then
   apptainer exec --cleanenv --no-home --bind "$SCRATCH_ROOT:$SCRATCH_ROOT" "$IMAGE" python -m venv --copies "$SCRATCH_ROOT/env/rl-smoke"

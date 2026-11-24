@@ -461,7 +461,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run benchmark-style math evaluation for real Qwen modes.")
     parser.add_argument(
         "--benchmark",
-        choices=["math", "math500", "gsm8k100", "aime2024", "aime2025", "aime"],
+        choices=["math", "math500", "gsm8k100", "aime2024", "aime2025", "aime2026", "aime"],
         default="math",
     )
     parser.add_argument("--split", default="test")
@@ -471,7 +471,7 @@ def main() -> None:
         default=None,
         help=(
             "Number of examples. Defaults: math=20, math500=500, gsm8k100=100, "
-            "aime2024/aime2025/aime=all available."
+            "aime2024/aime2025/aime2026/aime=all available."
         ),
     )
     parser.add_argument("--sample_seed", type=int, default=0)

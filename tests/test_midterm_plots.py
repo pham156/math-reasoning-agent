@@ -1,11 +1,25 @@
 import unittest
 
-from scripts.paper.plot_midterm import METHODS, paired_lr_points, pass_at_k, trailing_mean, training_points
+from scripts.paper.plot_midterm import METHODS, mixed_group_points, paired_lr_points, pass_at_k, trailing_mean, training_points
 
 
 class MidtermPlotTests(unittest.TestCase):
     def test_report_methods_are_focused(self):
         self.assertEqual(list(METHODS), ["baseline", "grpo", "dr_grpo"])
+
+    def test_mixed_groups_match_raw_binary_rewards(self):
+        history = [{"step": step, "frac_reward_zero_std": 0.5} for step in range(1, 128, 4)]
+        records = [{"problem": str(group), "reward": int(group % 2 == 0 and candidate == 0)}
+                   for group in range(512) for candidate in range(4)]
+        self.assertEqual(mixed_group_points(history, records), [(step, 0.5) for step in range(1, 128, 4)])
+        with self.assertRaises(ValueError):
+            mixed_group_points(history, records[:-1])
+        records[0]["reward"] = 0.1
+        with self.assertRaises(ValueError):
+            mixed_group_points(history, records)
+        records[0]["reward"] = 0
+        with self.assertRaises(ValueError):
+            mixed_group_points(history, records)
 
     def test_entropy_requires_all_updates_and_finite_values(self):
         history = [{"step": step, "entropy": 0.5} for step in range(1, 129)]

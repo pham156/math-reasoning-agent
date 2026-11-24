@@ -1,0 +1,15 @@
+\begin{table*}[t]
+\centering
+\caption{One-factor learning-rate sweep: dev 300 accuracy (\%),128 updates, one fixed reference run per condition. Dashes denote unrun settings, not zero accuracy. Other settings remain fixed within each method.}
+\label{tab:rates}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrr}
+\toprule
+Method & $2\cdot10^{-7}$ & $5\cdot10^{-7}$ & $10^{-6}$ & $2\cdot10^{-6}$ & $3\cdot10^{-6}$\\
+\midrule
+GRPO & 49.3 & 61.7 & 72.3 & 70.0 & 75.0\\
+Dr.~GRPO & 51.0 & 63.3 & 68.3 & --- & ---\\
+\bottomrule
+\end{tabular}
+\end{table*}

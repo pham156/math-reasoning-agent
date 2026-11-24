@@ -1,0 +1,16 @@
+\begin{table}[t]
+\centering
+\caption{Complete external consensus conditions only: frozen $T=0.7$, eight responses, cap3000, original prompts, fixed-order strict majority with first-candidate fallback. Tokens $\times$ is total completion-token cost relative to each policy's greedy control. The incomplete step512 MATH-500 consensus condition is excluded.}
+\label{tab:external_selection}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrr}
+\toprule
+Dataset & Policy & n & Greedy & Vote & Tokens $\times$\\
+\midrule
+MATH-500 & No RL & 500 & 34.8 & 36.6 & 6.84\\
+GSM8K-100 & No RL & 100 & 38.0 & 38.0 & 5.80\\
+GSM8K-100 & 512 & 100 & 85.0 & 86.0 & 8.43\\
+\bottomrule
+\end{tabular}
+\end{table}

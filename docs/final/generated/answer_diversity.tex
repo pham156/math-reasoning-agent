@@ -1,0 +1,17 @@
+\begin{table}[t]
+\centering
+\caption{Mean normalized final-answer entropy in nats on the fixed 100 development questions. This is answer diversity, not token-policy entropy; temperatures are discrete measured conditions.}
+\label{tab:answer_diversity}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrr}
+\toprule
+Checkpoint & $T=0.4$ & $T=0.7$ & $T=1.0$\\
+\midrule
+No RL & 1.226 & 1.420 & 1.698\\
+128 & 0.521 & 0.632 & 0.797\\
+256 & 0.477 & 0.563 & 0.740\\
+512 & 0.466 & 0.510 & 0.562\\
+\bottomrule
+\end{tabular}
+\end{table}

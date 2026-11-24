@@ -1,0 +1,18 @@
+\begin{table}[t]
+\centering
+\caption{GRPO regularization at LR $10^{-6}$, one fixed reference run per condition. Prefix KL is an offline shared-context diagnostic, not training KL. Clip fraction is a fraction, not a percentage.}
+\label{tab:regularization}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrr}
+\toprule
+Setting & Dev300 & Prefix KL & Clip fraction\\
+\midrule
+Control & 72.3 & 0.0459 & 0.000054\\
+$\beta=0.001$ & 70.3 & 0.0316 & 0.000048\\
+$\beta=0.01$ & 71.0 & 0.0298 & 0.000052\\
+Clip $0.1/0.1$ & 68.7 & 0.0229 & 0.002073\\
+Clip $0.3/0.3$ & 70.7 & 0.0426 & 0.000007\\
+\bottomrule
+\end{tabular}
+\end{table}

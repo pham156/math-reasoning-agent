@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd /home/pham156/math-reasoning-agent
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.."
 source scripts/setup_env.sh >/dev/null
 
 export APPTAINER_CACHEDIR="$CACHE_DIR/apptainer"

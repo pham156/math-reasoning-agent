@@ -1,0 +1,17 @@
+\begin{table}[t]
+\centering
+\caption{Greedy answer accuracy (\%) on the same 100 development problems, varying only the completion cap. These are diagnostic100 scores, not dev300 or external benchmark accuracy.}
+\label{tab:inference_budget}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrr}
+\toprule
+Checkpoint & 512 & 1024 & 2048 & 3000\\
+\midrule
+No RL & 28.0 & 48.0 & 50.0 & 50.0\\
+128 & 45.0 & 75.0 & 79.0 & 79.0\\
+256 & 49.0 & 74.0 & 78.0 & 78.0\\
+512 & 50.0 & 71.0 & 74.0 & 74.0\\
+\bottomrule
+\end{tabular}
+\end{table}

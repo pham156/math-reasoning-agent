@@ -18,6 +18,17 @@ NAMES = ("baseline", "grpo", "dr_grpo", "dapo_style", "gspo", "sft")
 MAX_NEW_TOKENS = 3000
 
 
+def decoding_settings(mode, temperature=None, max_new_tokens=MAX_NEW_TOKENS):
+    temperature = (0.0 if mode == "greedy" else 1.0) if temperature is None else temperature
+    if mode not in ("greedy", "sampled") or not math.isfinite(temperature):
+        raise ValueError("Invalid decoding mode/temperature")
+    if (mode == "greedy" and temperature != 0) or (mode == "sampled" and temperature <= 0):
+        raise ValueError("Greedy requires temperature 0; sampling requires positive temperature")
+    if not 1 <= max_new_tokens <= MAX_NEW_TOKENS:
+        raise ValueError("Completion cap must be between 1 and the validated 3000-token limit")
+    return temperature, max_new_tokens
+
+
 def pass_at_k(n, correct, k):
     if not 0 <= correct <= n or not 1 <= k <= n:
         raise ValueError("Invalid pass@k counts")
@@ -67,7 +78,15 @@ def main():
     parser.add_argument("--prepare_only", action="store_true")
     parser.add_argument("--benchmark_file", help="Frozen external benchmark JSON; its metadata may set shard_size")
     parser.add_argument("--num_samples", type=int, help="Responses per problem in sampled mode (default 8)")
+    parser.add_argument("--temperature", type=float)
+    parser.add_argument("--max_new_tokens", type=int, default=MAX_NEW_TOKENS)
+    parser.add_argument("--limit", type=int, help="Short shard for GPU smoke validation only")
+    parser.add_argument("--require_complete", action="store_true")
     args = parser.parse_args()
+    try:
+        temperature, cap = decoding_settings(args.mode, args.temperature, args.max_new_tokens)
+    except ValueError as error:
+        parser.error(str(error))
     if args.num_samples is not None and (args.mode != "sampled" or not 1 <= args.num_samples <= 64):
         parser.error("--num_samples applies only to sampled mode and must be between 1 and 64")
     num_samples = 1 if args.mode == "greedy" else (args.num_samples or 8)
@@ -82,6 +101,8 @@ def main():
             parser.error(f"External benchmark must contain complete {shard_size}-problem shards")
     if not 0 <= args.shard < total // shard_size or args.segment_seconds < 0:
         parser.error("Invalid shard/deadline")
+    if args.limit is not None and not 1 <= args.limit <= shard_size:
+        parser.error("limit must fit within one shard")
     if args.mode == "sampled" and args.name == "sft":
         parser.error("SFT remains a greedy-only supporting control")
     for key in ("pilot_root", "comparison_root", "output_dir"):
@@ -110,11 +131,15 @@ def main():
         if len(dev) != 300 or set(dev["source_index"]) & set(train["source_index"]):
             raise ValueError("Frozen development split is invalid or overlaps training")
         rows = list(dev.select(range(args.shard * shard_size, (args.shard + 1) * shard_size)))
+    if args.limit is not None:
+        rows = rows[:args.limit]
     seed_offset = benchmark["metadata"].get("seed_offset", 0) if benchmark else 0
     prompts = [tokenizer.apply_chat_template(r["prompt"], tokenize=False, add_generation_prompt=True) for r in rows]
-    check_context([len(tokenizer(p, add_special_tokens=False)["input_ids"]) for p in prompts], AutoConfig.from_pretrained(model_path, local_files_only=True).max_position_embeddings)
+    check_context([len(tokenizer(p, add_special_tokens=False)["input_ids"]) for p in prompts], AutoConfig.from_pretrained(model_path, local_files_only=True).max_position_embeddings, cap)
     prompt_hashes = [hashlib.sha256(p.encode()).hexdigest() for p in prompts]
-    config = {"name": args.name, "mode": args.mode, "shard": args.shard, "model_path": str(model_path), "source_indices": [r["source_index"] for r in rows], "prompt_hashes": prompt_hashes, "stop_ids": eos, "max_new_tokens": MAX_NEW_TOKENS, "num_samples": num_samples, "temperature": 0 if args.mode == "greedy" else 1.0, "top_p": 1.0, "top_k": 0, "seed_rule": seed_rule(seed_offset), "precision": "FP32 parameters/BF16 compute", "grader": "pilot exact/Math-Verify", "sampling_batch": num_samples}
+    config = {"name": args.name, "mode": args.mode, "shard": args.shard, "model_path": str(model_path), "source_indices": [r["source_index"] for r in rows], "prompt_hashes": prompt_hashes, "stop_ids": eos, "max_new_tokens": cap, "num_samples": num_samples, "temperature": temperature, "top_p": 1.0, "top_k": 0, "seed_rule": seed_rule(seed_offset), "precision": "FP32 parameters/BF16 compute", "grader": "pilot exact/Math-Verify", "sampling_batch": num_samples}
+    if args.limit is not None:
+        config["limit"] = args.limit
     config_path = root / f"shard_{args.shard}_config.json"
     if benchmark:
         config["benchmark"] = benchmark["metadata"]
@@ -147,13 +172,15 @@ def main():
     with path.open("a", encoding="utf-8") as stream:
         for row, prompt, prompt_hash in zip(rows[len(existing):], prompts[len(existing):], prompt_hashes[len(existing):]):
             if args.segment_seconds and time.monotonic() - started >= args.segment_seconds:
+                if args.require_complete:
+                    raise RuntimeError("Shard deadline reached before completion; partial outputs preserved")
                 print("Paused safely between problems; rerun this shard to continue", flush=True)
                 return
             inputs = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
             set_seed(sample_seed(row["source_index"], seed_offset))
-            kwargs = {"do_sample": args.mode == "sampled", "num_return_sequences": config["num_samples"], "max_new_tokens": MAX_NEW_TOKENS, "eos_token_id": eos, "pad_token_id": tokenizer.pad_token_id, "use_cache": True}
+            kwargs = {"do_sample": args.mode == "sampled", "num_return_sequences": config["num_samples"], "max_new_tokens": cap, "eos_token_id": eos, "pad_token_id": tokenizer.pad_token_id, "use_cache": True}
             if args.mode == "sampled":
-                kwargs.update(temperature=1.0, top_p=1.0, top_k=0)
+                kwargs.update(temperature=temperature, top_p=1.0, top_k=0)
             group_start = time.monotonic()
             with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
                 generated = model.generate(**inputs, **kwargs)
@@ -164,7 +191,7 @@ def main():
                 ended = next((i for i, token in enumerate(tokens) if token in eos), None)
                 tokens = tokens[:ended + 1] if ended is not None else tokens
                 raw = tokenizer.decode(tokens, skip_special_tokens=True)
-                candidates.append({"sample_index": index, "raw_solution": raw, "answer": extract_final_answer(raw), "correct": bool(grade_solution(raw, row["answer"])), "generated_tokens": len(tokens), "truncated": ended is None and len(tokens) >= MAX_NEW_TOKENS, "ending_token_id": tokens[-1] if tokens else None})
+                candidates.append({"sample_index": index, "raw_solution": raw, "answer": extract_final_answer(raw), "correct": bool(grade_solution(raw, row["answer"])), "generated_tokens": len(tokens), "truncated": ended is None and len(tokens) >= cap, "ending_token_id": tokens[-1] if tokens else None})
             correct = sum(c["correct"] for c in candidates)
             payload = {"source_index": row["source_index"], "problem": row["problem"], "reference_answer": row["answer"], "type": row["type"], "level": row["level"], "prompt_hash": prompt_hash, "name": args.name, "mode": args.mode, "candidates": candidates, "num_correct": correct, "pass_at_k": {str(k): pass_at_k(len(candidates), correct, k) for k in ([1] if args.mode == "greedy" else pass_k_values(len(candidates)))}, "runtime_seconds": elapsed, "input_tokens": inputs["input_ids"].shape[1], "slurm_job_id": os.environ.get("SLURM_JOB_ID")}
             stream.write(json.dumps(payload) + "\n")

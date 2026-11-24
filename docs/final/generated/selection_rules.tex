@@ -1,0 +1,17 @@
+\begin{table}[t]
+\centering
+\caption{Retrospective development selection at $T=0.4$, eight candidates. Accuracy (\%) averages uniformly over candidate order, including winning-group representatives and fallback/ties; it is not the original fixed-order consensus result. Oracle@8 is a scoring upper bound, never a selector.}
+\label{tab:selection_rules}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrr}
+\toprule
+Checkpoint & Random first & Majority & Plurality & Oracle@8\\
+\midrule
+No RL & 45.25 & 52.75 & 67.33 & 81.0\\
+128 & 75.75 & 81.25 & 85.96 & 91.0\\
+256 & 78.12 & 82.25 & 89.17 & 94.0\\
+512 & 76.88 & 80.96 & 85.09 & 92.0\\
+\bottomrule
+\end{tabular}
+\end{table}

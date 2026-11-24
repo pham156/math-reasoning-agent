@@ -418,6 +418,19 @@ def load_benchmark_examples(
             sampling=sampling,
             start_index=start_index,
         )
+    if benchmark == "aime2026":
+        local_path = data_dir("AIME_2026")
+        if not local_path.exists():
+            raise RuntimeError(
+                "AIME 2026 is not downloaded. Run: "
+                "bash scripts/rl/smoke_python.sh -m scripts.download_benchmarks "
+                "--benchmarks AIME_2025 AIME_2026"
+            )
+        return load_aime_year(
+            benchmark="aime2026", target_dir="AIME_2026", dataset_id="math-ai/aime26",
+            split="test", default_year="2026", limit=limit, sample_seed=sample_seed,
+            sampling=sampling, start_index=start_index,
+        )
     if benchmark == "aime":
         return load_aime(
             limit=limit,

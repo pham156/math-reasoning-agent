@@ -17,6 +17,8 @@ from src.core.config import data_dir, ensure_scratch_path, model_dir, output_dir
 from src.evaluation.answer import extract_committed_answer, extract_final_answer
 from src.training.grpo.train import summarize_history, write_json
 from src.training.rl.methods import METHODS, check_method_config, method_settings
+from src.training.rl.checkpoint_storage import checkpoint_due, save_limit
+from src.training.rl.reward_design import batch_metrics, reward_components
 
 
 SYSTEM_PROMPT = r"Please reason step by step, and put your final answer within \boxed{}."
@@ -26,6 +28,33 @@ def conversation(problem: str) -> list[dict]:
     return [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": problem}]
 
 
+def epoch_repeat_sampler_class():
+    import torch
+    from trl.trainer.utils import RepeatSampler
+
+    class EpochRepeatSampler(RepeatSampler):
+        def __init__(self, *args, resume_epoch=0, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.resume_epoch = resume_epoch
+            self.epoch = resume_epoch
+
+        def set_epoch(self, epoch):
+            if epoch < 0 or self.seed is None:
+                raise ValueError("Repeated-pass sampling requires a seeded, nonnegative epoch")
+            # Accelerate's skipped-batch loader starts its iteration counter at zero.
+            self.epoch = max(epoch, self.resume_epoch)
+
+        def __iter__(self):
+            if self.shuffle:
+                # Replay the private generator's earlier permutations without changing global RNG.
+                self.generator.manual_seed(self.seed)
+                for _ in range(self.epoch):
+                    torch.randperm(self.num_samples, generator=self.generator)
+            return super().__iter__()
+
+    return EpochRepeatSampler
+
+
 def smoke_trainer_class():
     from trl import GRPOTrainer
 
@@ -33,6 +62,17 @@ def smoke_trainer_class():
         raise RuntimeError("Use the pinned smoke runtime: this adapter is validated for TRL 0.25.1")
 
     class SmokeTrainer(GRPOTrainer):
+        def _get_train_sampler(self, dataset=None):
+            sampler = super()._get_train_sampler(dataset)
+            if not getattr(self, "epoch_addressed_sampler", False):
+                return sampler
+            return epoch_repeat_sampler_class()(
+                data_source=sampler.data_source, mini_repeat_count=sampler.mini_repeat_count,
+                batch_size=sampler.batch_size, repeat_count=sampler.repeat_count,
+                shuffle=sampler.shuffle, seed=sampler.seed,
+                resume_epoch=self._step // (len(sampler.data_source) * sampler.mini_repeat_count),
+            )
+
         def _compute_loss(self, model, inputs):
             # TRL 0.25.1's DAPO denominator spans generation, even when several updates consume it.
             if self.loss_type == "dapo" and model.training:
@@ -48,13 +88,13 @@ STRICT_GRADER = "closed-boxed-v1"
 
 @lru_cache(maxsize=4096)
 def grade_solution(text: str, answer: str) -> float:
-    """Historical lenient grader; it defines the pilot reward, so its behavior is frozen."""
+    """Historical lenient grader used by the pilot reward."""
     return answers_match(extract_final_answer(text), answer)
 
 
 @lru_cache(maxsize=4096)
 def grade_solution_strict(text: str, answer: str) -> float:
-    """Credit only a closed final \\boxed{} answer (STRICT_GRADER); used for reporting."""
+    """Reporting-only grader requiring a closed final boxed answer."""
     return answers_match(extract_committed_answer(text) or "", answer)
 
 
@@ -161,29 +201,38 @@ def run(args, run_dir: Path, dataset_preparer=prepare_dataset) -> None:
     else:
         baseline = evaluate(model, tokenizer, held_out, args.max_completion_length)
         write_json(baseline_path, {"examples": baseline})
-    generation_batch = args.gradient_accumulation_steps * 4
+    generations = getattr(args, "num_generations", 4)
+    generation_batch = args.gradient_accumulation_steps * generations
     clip_lower, clip_upper = getattr(args, "clip_lower", None), getattr(args, "clip_upper", None)
     objective = method_settings(args.algorithm, clip_lower, clip_upper)
     beta = getattr(args, "kl_beta", 0.0)
+    checkpoint_limit = getattr(args, "checkpoint_limit", None) or save_limit(run_dir)
     reference_kwargs = {"dtype": "float32", "attn_implementation": "sdpa", "local_files_only": True} if beta else None
     config = GRPOConfig(
         output_dir=str(run_dir / "checkpoints"), max_steps=args.max_steps,
         per_device_train_batch_size=1, gradient_accumulation_steps=args.gradient_accumulation_steps,
-        generation_batch_size=generation_batch, num_generations=4, num_iterations=1,
+        generation_batch_size=generation_batch, num_generations=generations, num_iterations=1,
         max_prompt_length=args.max_prompt_length, max_completion_length=args.max_completion_length,
         learning_rate=getattr(args, "learning_rate", 1e-6), lr_scheduler_type="constant", warmup_steps=0,
         adam_beta1=0.9, adam_beta2=0.95, weight_decay=0.0, max_grad_norm=1.0,
-        temperature=1.0, top_p=1.0, top_k=0, beta=beta,
+        temperature=getattr(args, "temperature", 1.0), top_p=1.0, top_k=0, beta=beta,
         model_init_kwargs=reference_kwargs,
         bf16=True, gradient_checkpointing=True, gradient_checkpointing_kwargs={"use_reentrant": False},
-        logging_steps=1, save_strategy="steps", save_steps=getattr(args, "save_steps", args.max_steps), save_total_limit=2,
+        logging_steps=1, save_strategy="no" if checkpoint_limit == 1 else "steps",
+        save_steps=getattr(args, "save_steps", args.max_steps), save_total_limit=checkpoint_limit,
         report_to="none", push_to_hub=False, use_vllm=False, seed=args.seed, full_determinism=deterministic,
         mask_truncated_completions=False, **objective,
     )
     check_method_config(args.algorithm, config, clip_lower, clip_upper)
+    if config.steps_per_generation != generation_batch or config.steps_per_generation // args.gradient_accumulation_steps != generations:
+        raise ValueError("Unexpected rollout boundary in installed TRL configuration")
     versions = {name: importlib.metadata.version(name) for name in ["torch", "transformers", "trl", "datasets", "accelerate", "math-verify"]}
     metadata = {"algorithm": args.algorithm, "status": "running", "arguments": vars(args), "objective": objective, "kl_beta": beta, "reward": "R0: extracted final-answer exact/Math-Verify correctness", "precision": {"trainable_parameters": "float32", "compute": "bfloat16", "peft": False, "quantization": False}, "gpu": torch.cuda.get_device_name(), "versions": versions, "slurm_job_id": os.environ.get("SLURM_JOB_ID"), "slurm_array_task_id": os.environ.get("SLURM_ARRAY_TASK_ID"), "generation_batch_responses": generation_batch, "optimizer_batch_responses": args.gradient_accumulation_steps}
     metadata["dapo_normalizer_adapter"] = args.algorithm == "dapo_style"
+    metadata["reward_design"] = getattr(args, "reward_design", "correctness")
+    metadata["reward"] = metadata["reward_design"]
+    metadata["rollout_boundary_updates"] = generations
+    metadata["sampler"] = "epoch_addressed_repeat_v1" if getattr(args, "training_passes", 1) > 1 else "legacy_repeat"
     metadata["determinism"] = {"requested": deterministic, "algorithms_enabled": torch.are_deterministic_algorithms_enabled(), "cublas_workspace_config": os.environ.get("CUBLAS_WORKSPACE_CONFIG"), "cudnn_benchmark": torch.backends.cudnn.benchmark, "matmul_tf32": torch.backends.cuda.matmul.allow_tf32}
     revision_file = Path(args.model_path) / ".cache/huggingface/download/config.json.metadata"
     if revision_file.exists():
@@ -193,15 +242,29 @@ def run(args, run_dir: Path, dataset_preparer=prepare_dataset) -> None:
     monitor = next(parameter for name, parameter in model.named_parameters() if name.endswith("self_attn.q_proj.weight"))
     before = monitor.detach().flatten()[:4096].float().cpu().clone()
 
-    def accuracy_reward(completions, answer, problem, **kwargs):
-        rewards = []
+    def accuracy_reward(completions, answer, problem, completion_ids, **kwargs):
+        from math_verify import parse
+
+        def parseable(value):
+            try:
+                return bool(parse(r"\boxed{" + value + "}"))
+            except Exception:
+                return False
+
+        records = []
         with (run_dir / "rollouts.jsonl").open("a", encoding="utf-8") as stream:
-            for completion, reference, question in zip(completions, answer, problem, strict=True):
+            for completion, reference, question, ids in zip(completions, answer, problem, completion_ids, strict=True):
                 text = completion if isinstance(completion, str) else "\n".join(turn["content"] for turn in completion)
-                reward = grade_solution(text, reference)
-                rewards.append(reward)
-                stream.write(json.dumps({"problem": question, "reference_answer": reference, "completion": text, "extracted_answer": extract_final_answer(text), "reward": reward}) + "\n")
-        return rewards
+                components = reward_components(text, grade_solution(text, reference), len(ids), args.max_completion_length, metadata["reward_design"], parseable)
+                record = {"problem": question, "reference_answer": reference, "completion": text, "extracted_answer": extract_final_answer(text), **components}
+                records.append(record)
+                stream.write(json.dumps(record) + "\n")
+        metrics = batch_metrics(records, generations)
+        for key, value in metrics.items():
+            trainer._metrics["train"]["reward_components/" + key].append(value)
+        with (run_dir / "reward_groups.jsonl").open("a") as stream:
+            stream.write(json.dumps({"step": trainer.state.global_step, "responses": len(records), "groups": len(records) // generations, **metrics}) + "\n")
+        return [r["reward"] for r in records]
 
     class FiniteMetrics(TrainerCallback):
         def on_log(self, args, state, control, logs=None, **kwargs):
@@ -214,13 +277,15 @@ def run(args, run_dir: Path, dataset_preparer=prepare_dataset) -> None:
             stop_step = getattr(run_args, "stop_after_step", 0)
             stop = (deadline and time.monotonic() - started >= deadline) or (stop_step and state.global_step >= stop_step)
             # Stop only after every slice of the current rollout batch has been consumed.
-            if stop and state.global_step % 4 == 0:
+            if checkpoint_due(state.global_step, args.max_steps, generations, stop):
                 control.should_save = True
-                control.should_training_stop = True
+                if stop:
+                    control.should_training_stop = True
             return control
 
     run_args = args
     trainer = smoke_trainer_class()(model=model, args=config, reward_funcs=accuracy_reward, train_dataset=train, processing_class=tokenizer, callbacks=[FiniteMetrics()])
+    trainer.epoch_addressed_sampler = getattr(args, "training_passes", 1) > 1
     if beta:
         if trainer.ref_model is None:
             raise RuntimeError("Nonzero KL requires a fixed reference model")
@@ -232,8 +297,8 @@ def run(args, run_dir: Path, dataset_preparer=prepare_dataset) -> None:
         write_json(run_dir / "run_config.json", metadata)
     if resume:
         saved_step = json.loads((Path(resume) / "trainer_state.json").read_text())["global_step"]
-        if saved_step % 4:
-            raise ValueError("Continuation requires a rollout-boundary checkpoint (step divisible by four)")
+        if saved_step % generations:
+            raise ValueError("Continuation requires a complete rollout-boundary checkpoint")
         trainer._step = saved_step * args.gradient_accumulation_steps
     torch.cuda.reset_peak_memory_stats()
     trained = trainer.train(resume_from_checkpoint=resume)

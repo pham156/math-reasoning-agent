@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import argparse
+import hashlib
 import json
 from pathlib import Path
 import time
@@ -40,8 +42,17 @@ BENCHMARKS = [
         "name": "AIME 2025 (legacy copy)",
         "dataset_id": "math-ai/aime25",
         "target": "AIME_2025",
-        "kwargs": {},
+        "kwargs": {"revision": "563bb8404243c5f09de6ec262f2db674fe5bce9b"},
+        "expected_rows": 30,
         "note": "30 AIME 2025 problems used by the older 7B/QLoRA runs (benchmark preset aime2025). Its problem 2 wording differs from MathArena; the 1.5B pilot AIME check uses MathArena below.",
+    },
+    {
+        "name": "AIME 2026 (math-ai)",
+        "dataset_id": "math-ai/aime26",
+        "target": "AIME_2026",
+        "kwargs": {"revision": "79037aebdb6580008fb960d17cb21fd3099083e3"},
+        "expected_rows": 30,
+        "note": "Separate 30-problem provider-specific evaluation copy; not pooled with MathArena.",
     },
     {
         "name": "AIME 2025 (MathArena)",
@@ -77,6 +88,27 @@ def dataset_size(dataset) -> dict:
     return {"rows": len(dataset)}
 
 
+def validate_aime(dataset, expected_rows: int) -> dict:
+    rows = list(dataset["test"])
+    if len(rows) != expected_rows:
+        raise ValueError(f"Expected {expected_rows} AIME test rows, got {len(rows)}")
+    ids, problems = set(), set()
+    for row in rows:
+        problem = row.get("problem", "").strip()
+        answer = str(row.get("answer", "")).strip()
+        identity = str(row.get("id", "")).strip()
+        normalized = " ".join(problem.split())
+        if not problem or not identity or identity in ids or normalized in problems:
+            raise ValueError("AIME problems and IDs must be nonempty and unique")
+        if not answer.isascii() or not answer.isdecimal() or not 0 <= int(answer) <= 999:
+            raise ValueError(f"Invalid AIME integer answer for ID {identity}")
+        ids.add(identity)
+        problems.add(normalized)
+    return {"validated_rows": len(rows), "content_sha256": hashlib.sha256(
+        json.dumps(rows, sort_keys=True, ensure_ascii=True).encode()
+    ).hexdigest()}
+
+
 def revision_record_path(target: Path) -> Path:
     """Sidecar beside the saved dataset recording the Hub commit it was downloaded at."""
     return target.with_name(target.name + ".download.json")
@@ -101,6 +133,7 @@ def save_hf_dataset(spec: dict) -> dict:
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.exists():
         dataset = load_from_disk(str(target))
+        validation = validate_aime(dataset, spec["expected_rows"]) if "expected_rows" in spec else {}
         return {
             "name": spec["name"],
             "dataset_id": spec["dataset_id"],
@@ -109,16 +142,18 @@ def save_hf_dataset(spec: dict) -> dict:
             "revision": recorded_revision(target, spec["dataset_id"]),
             "splits": dataset_size(dataset),
             "note": spec.get("note", ""),
+            **validation,
         }
 
     # Resolve the current commit once and download exactly that, so the record cannot drift.
-    revision = HfApi().dataset_info(spec["dataset_id"]).sha
     kwargs = dict(spec.get("kwargs", {}))
+    revision = kwargs.pop("revision", None) or HfApi().dataset_info(spec["dataset_id"]).sha
     config_name = kwargs.pop("name", None)
     if config_name:
         dataset = load_dataset(spec["dataset_id"], config_name, revision=revision, **kwargs)
     else:
         dataset = load_dataset(spec["dataset_id"], revision=revision, **kwargs)
+    validation = validate_aime(dataset, spec["expected_rows"]) if "expected_rows" in spec else {}
     dataset.save_to_disk(str(target))
     revision_record_path(target).write_text(json.dumps({"dataset_id": spec["dataset_id"], "revision": revision}, indent=2) + "\n", encoding="utf-8")
     return {
@@ -129,6 +164,7 @@ def save_hf_dataset(spec: dict) -> dict:
         "revision": revision,
         "splits": dataset_size(dataset),
         "note": spec.get("note", ""),
+        **validation,
     }
 
 
@@ -159,16 +195,26 @@ def check_local_dataset(spec: dict) -> dict:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Download benchmark datasets into scratch.")
+    parser.add_argument("--benchmarks", nargs="+", choices=[s.get("target", "MathArena_" + s.get("matharena", "")) for s in BENCHMARKS])
+    parser.add_argument("--dry_run", action="store_true")
+    args = parser.parse_args()
     print_storage_summary()
+    specs = [s for s in BENCHMARKS if not args.benchmarks or s.get("target", "MathArena_" + s.get("matharena", "")) in args.benchmarks]
+    if args.dry_run:
+        for spec in specs:
+            target = spec.get("target", "MathArena_" + spec.get("matharena", ""))
+            print(f"{spec.get('dataset_id', spec.get('matharena'))} -> {data_dir(target)}")
+        return
     manifest = {
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "data_dir": str(data_dir()),
         "benchmarks": [],
     }
 
-    manifest_path = data_dir("benchmark_manifest.json")
+    manifest_path = data_dir("benchmark_manifest_selected.json" if args.benchmarks else "benchmark_manifest.json")
     try:
-        for spec in BENCHMARKS:
+        for spec in specs:
             print(f"\n== {spec['name']} ==")
             if spec.get("already_local"):
                 record = check_local_dataset(spec)

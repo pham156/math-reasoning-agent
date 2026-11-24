@@ -1,0 +1,16 @@
+\begin{table}[t]
+\centering
+\caption{Auxiliary retention diagnostic for original LR $10^{-6}$ models. WikiText subset perplexity uses 32 fixed 512-token blocks; raw BoolQ/ARC label-likelihood evaluations use 100 questions each. Not a claim of broad capability preservation.}
+\label{tab:retention}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrr}
+\toprule
+Model & Subset PPL & BoolQ raw & ARC raw\\
+\midrule
+No RL & 24.04 & 55.0 & 73.0\\
+GRPO & 24.11 & 54.0 & 73.0\\
+Dr.~GRPO & 24.09 & 54.0 & 73.0\\
+\bottomrule
+\end{tabular}
+\end{table}

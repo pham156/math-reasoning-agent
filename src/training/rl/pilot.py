@@ -1,4 +1,4 @@
-"""Shared-data, correctness-only pilots using the validated four-method backend."""
+"""Shared-data pilots using the validated four-method backend."""
 
 import argparse
 import hashlib
@@ -11,6 +11,7 @@ from src.core.config import data_dir, ensure_scratch_path, model_dir, output_dir
 from src.evaluation.answer import extract_final_answer
 from src.training.grpo.train import write_json
 from src.training.rl.methods import METHODS
+from src.training.rl.reward_design import REWARDS
 from src.training.rl.smoke import conversation, run
 
 
@@ -93,6 +94,8 @@ def main():
     parser.add_argument("--train_samples", type=int, default=512)
     parser.add_argument("--eval_samples", type=int, default=100)
     parser.add_argument("--max_steps", type=int, default=128)
+    parser.add_argument("--training_passes", type=int, default=1, choices=[1, 2, 3, 4])
+    parser.add_argument("--checkpoint_limit", type=int, choices=[1, 2])
     parser.add_argument("--gradient_accumulation_steps", type=int, default=16, choices=[16])
     parser.add_argument("--max_prompt_length", type=int, default=1024)
     parser.add_argument("--max_completion_length", type=int, default=3000)
@@ -101,6 +104,9 @@ def main():
     parser.add_argument("--kl_beta", type=float, default=0.0)
     parser.add_argument("--clip_lower", type=float)
     parser.add_argument("--clip_upper", type=float)
+    parser.add_argument("--reward_design", choices=REWARDS, default="correctness")
+    parser.add_argument("--num_generations", type=int, choices=[2, 4, 8], default=4)
+    parser.add_argument("--temperature", type=float, default=1.0)
     parser.add_argument("--save_steps", type=int, default=16)
     parser.add_argument("--segment_seconds", type=int, default=10800)
     parser.add_argument("--stop_after_step", type=int, default=0)
@@ -112,6 +118,10 @@ def main():
         ensure_scratch_path(getattr(args, label), label)
     if not math.isfinite(args.learning_rate) or args.learning_rate <= 0:
         parser.error("learning_rate must be finite and positive")
+    if not math.isfinite(args.temperature) or args.temperature <= 0:
+        parser.error("temperature must be finite and positive")
+    if args.algorithm != "grpo" and (args.num_generations != 4 or args.temperature != 1.0 or args.reward_design != "correctness"):
+        parser.error("Reward/exploration variants are restricted to GRPO")
     if not math.isfinite(args.kl_beta) or args.kl_beta < 0 or (args.kl_beta and args.algorithm != "grpo"):
         parser.error("kl_beta must be finite/nonnegative; nonzero beta is restricted to GRPO")
     from src.training.rl.methods import method_settings
@@ -119,8 +129,11 @@ def main():
         method_settings(args.algorithm, args.clip_lower, args.clip_upper)
     except ValueError as error:
         parser.error(str(error))
-    if args.eval_samples < 1 or args.segment_seconds < 0 or args.stop_after_step < 0 or args.train_samples % 16 or not 0 < args.max_steps <= args.train_samples // 4 or args.max_steps % 4 or args.save_steps <= 0 or args.save_steps % 4:
-        parser.error("Require complete 16-prompt batches and four-update boundaries within one pass")
+    boundary = args.num_generations
+    if args.training_passes != 1 and args.algorithm != "grpo":
+        parser.error("Explicit repeated-pass continuation is restricted to GRPO")
+    if args.eval_samples < 1 or args.segment_seconds < 0 or args.stop_after_step < 0 or args.train_samples % 16 or not 0 < args.max_steps <= args.train_samples * boundary // 16 * args.training_passes or args.max_steps % boundary or args.save_steps <= 0 or args.save_steps % boundary:
+        parser.error("Require complete 16-prompt batches and rollout-boundary updates within the declared training passes")
     run_dir = Path(args.output_dir)
     if args.prepare_splits:
         from transformers import AutoTokenizer
@@ -128,25 +141,31 @@ def main():
         prepare_shared(args, tokenizer, run_dir)
         return
     args.resume_from_checkpoint = None
+    completed = False
     progress_file = run_dir / "progress.json"
     if args.resume and progress_file.exists():
         progress = json.loads(progress_file.read_text())
         if progress["status"] == "completed":
-            print("Already completed; continuation is a no-op")
-            return
+            completed = True
         args.resume_from_checkpoint = progress["checkpoint"]
     elif run_dir.exists() and any(run_dir.iterdir()):
         parser.error("Existing run without safe progress checkpoint; investigate rather than overwrite")
-    if args.resume_from_checkpoint:
+    if args.resume and progress_file.exists():
         previous = json.loads((run_dir / "run_config.json").read_text())["arguments"]
         if previous.get("learning_rate", 1e-6) != args.learning_rate:
             parser.error("Resume configuration changed: learning_rate")
-        for key, default in (("kl_beta", 0.0), ("clip_lower", None), ("clip_upper", None)):
+        for key, default in (("kl_beta", 0.0), ("clip_lower", None), ("clip_upper", None), ("reward_design", "correctness"), ("num_generations", 4), ("temperature", 1.0)):
+            if previous.get(key, default) != getattr(args, key):
+                parser.error(f"Resume configuration changed: {key}")
+        for key, default in (("training_passes", 1), ("checkpoint_limit", None)):
             if previous.get(key, default) != getattr(args, key):
                 parser.error(f"Resume configuration changed: {key}")
         for key in ("algorithm", "model_path", "split_dir", "seed", "max_steps", "train_samples", "eval_samples", "max_completion_length", "max_prompt_length", "deterministic_training"):
             if previous.get(key) != getattr(args, key):
                 parser.error(f"Resume configuration changed: {key}")
+    if completed:
+        print("Already completed; continuation is a no-op")
+        return
     run(args, run_dir, dataset_preparer=prepare_shared)
 
 

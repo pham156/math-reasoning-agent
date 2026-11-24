@@ -3,8 +3,8 @@
 # Source this file before running project commands:
 #   source scripts/setup_env.sh
 
-export PROJECT_ROOT=/home/pham156/math-reasoning-agent
-export SCRATCH_ROOT=/scratch/gilbreth/pham156/math-reasoning-agent
+export PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+export SCRATCH_ROOT="${SCRATCH_ROOT:-/scratch/gilbreth/${USER:?Set USER or SCRATCH_ROOT}/math-reasoning-agent}"
 
 if [[ "$SCRATCH_ROOT" != /scratch/gilbreth/* ]]; then
   echo "ERROR: SCRATCH_ROOT must be under /scratch/gilbreth, got: $SCRATCH_ROOT" >&2
