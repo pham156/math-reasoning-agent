@@ -4,9 +4,8 @@ IEEE conference-style draft, snapshot dated November 15, 2026. Focuses on GRPO a
 
 - [Draft PDF](final_report.pdf)
 - [LaTeX](main.tex)
-- [Overleaf archive](final_overleaf.zip)
 
-Compile `main.tex` with the standard IEEEtran class. All 15 referenced table inputs and two dense-training vector figures are included in `generated/` and `figures/`; raw scratch outputs are not required for compilation. The 18-file Overleaf archive contains the same manuscript assets.
+Compile `main.tex` with the standard IEEEtran class. All 15 referenced table inputs and two dense-training vector figures are included in `generated/` and `figures/`; raw scratch outputs are not required for compilation.
 
 The draft is a dated, deliberately narrower snapshot than the [results atlas](../results_compendium/completed_results.pdf). In particular, its frozen follow-up export omits a consensus cohort recovered later. Do not treat that earlier omission as evidence that the later validated cohort failed.
 

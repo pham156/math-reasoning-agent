@@ -6,9 +6,9 @@ Controlled post-training experiments on Qwen2.5-Math-1.5B: GRPO, Dr. GRPO, a DAP
 
 | Document | PDF | Editable source |
 |---|---|---|
-| Midterm update | [Two-page IEEE report](docs/midterm/midterm_update.pdf) | [LaTeX](docs/midterm/main.tex), [Overleaf](docs/midterm/midterm_overleaf.zip) |
-| Completed-results atlas | [All completed comparisons](docs/results_compendium/completed_results.pdf) | [LaTeX](docs/results_compendium/main.tex), [Overleaf](docs/results_compendium/results_overleaf.zip) |
-| Final report draft | [IEEE draft](docs/final/final_report.pdf) | [LaTeX](docs/final/main.tex), [Overleaf](docs/final/final_overleaf.zip) |
+| Midterm update | [Two-page IEEE report](docs/midterm/midterm_update.pdf) | [LaTeX](docs/midterm/main.tex) |
+| Completed-results atlas | [All completed comparisons](docs/results_compendium/completed_results.pdf) | [LaTeX](docs/results_compendium/main.tex) |
+| Final report draft | [IEEE draft](docs/final/final_report.pdf) | [LaTeX](docs/final/main.tex) |
 | A0 poster draft | [Poster PDF](docs/poster/research_poster.pdf) | [SVG](docs/poster/research_poster.svg), [preview](docs/poster/research_poster.png) |
 
 The documents are dated snapshots, not interchangeable summaries: the atlas includes more completed conditions than the earlier report drafts. Completed negative results are retained. Failed or partial benchmark cohorts are not promoted to full-benchmark scores. Final-answer correctness does not certify proof validity.
@@ -51,7 +51,7 @@ Training and evaluation require the relevant scratch models/data and an allocate
 
 ## Rebuilding Documents
 
-LaTeX sources and their referenced figures/tables are included, so report editing does not require the private experiment output tree. Upload the Overleaf archives directly, or compile each `main.tex` using its documented engine. The poster is also supplied as an editable vector SVG.
+LaTeX sources and their referenced figures/tables are included, so report editing does not require the private experiment output tree. Compile each `main.tex` using its documented engine, or upload its source folder to Overleaf. ZIP exports are not versioned. The poster is also supplied as an editable vector SVG.
 
 Regenerating numerical tables or plots from scratch is different from compiling a manuscript: the generators require the original saved experiment evidence and validate its provenance. Model weights, raw candidate JSONL, and checkpoints are not distributed. Existing summaries do not replace those source files when a generator requires them.
 

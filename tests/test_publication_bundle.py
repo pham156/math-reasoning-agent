@@ -3,24 +3,17 @@ import shutil
 import subprocess
 from pathlib import Path
 import unittest
-from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class PublicationBundleTests(unittest.TestCase):
-    def test_overleaf_archives_match_published_sources(self):
-        for name, archive in (("midterm", "midterm_overleaf.zip"),
-                              ("final", "final_overleaf.zip"),
-                              ("results_compendium", "results_overleaf.zip")):
-            directory = ROOT / "docs" / name
-            with self.subTest(document=name), ZipFile(directory / archive) as bundle:
-                self.assertIsNone(bundle.testzip())
-                for member in bundle.namelist():
-                    path = directory / member
-                    self.assertTrue(path.resolve().is_relative_to(directory.resolve()))
-                    self.assertEqual(bundle.read(member), path.read_bytes(), member)
+    def test_document_pdfs_are_present(self):
+        for name, filename in (("midterm", "midterm_update.pdf"), ("final", "final_report.pdf"),
+                               ("poster", "research_poster.pdf"), ("results_compendium", "completed_results.pdf")):
+            with self.subTest(document=name), (ROOT / "docs" / name / filename).open("rb") as stream:
+                self.assertEqual(stream.read(5), b"%PDF-")
 
     def test_manuscript_inputs_and_figures_are_self_contained(self):
         for name in ("midterm", "final", "results_compendium"):
@@ -43,7 +36,9 @@ class PublicationBundleTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which("git") and (ROOT / ".git").exists(), "Requires a Git checkout and host Git")
     def test_private_artifacts_are_ignored_but_documents_are_publishable(self):
         for path in (".agent/CONTINUITY.md", "AGENTS.md", "scripts/rl/run_algorithm_smokes.slurm",
-                     "outputs/example.jsonl", "logs/example.log", "checkpoints/weights.safetensors"):
+                     "outputs/example.jsonl", "logs/example.log", "checkpoints/weights.safetensors",
+                     "docs/midterm/midterm_overleaf.zip", "docs/final/final_overleaf.zip",
+                     "docs/results_compendium/results_overleaf.zip"):
             result = subprocess.run(["git", "check-ignore", "--no-index", "-q", path], cwd=ROOT)
             self.assertEqual(result.returncode, 0, path)
         for path in ("docs/midterm/midterm_update.pdf", "docs/final/final_report.pdf",

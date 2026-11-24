@@ -45,7 +45,8 @@ lightning_logs/
 submission.json
 *_submission.json
 
-# Curated report PDFs, sources, figures and Overleaf archives are versioned.
+# Curated report PDFs, sources and figures are versioned; ZIP exports stay local.
+/docs/**/*.zip
 # Exclude only previews, raw evidence snapshots and TeX intermediates.
 /docs/**/preview_*.png
 /docs/**/evidence.json
