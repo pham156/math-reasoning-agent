@@ -126,6 +126,36 @@ The default 64-response rollout batch supplies four 16-response optimizer update
 
 \clearpage
 
+\section{Implementation: From Rollouts to Parameter Updates}
+
+\textbf{Data and generation.} The split builder extracts reference answers, filters eligible MATH rows, reserves stratified development data and freezes source indices and problem hashes. The training dataset contains a chat-formatted problem and its reference answer, not a human reasoning target. For each prompt, the policy samples $G$ responses. A reward callback extracts each final answer, assigns binary correctness and records the completion, extracted answer and optional shaping components. Groups preserve prompt membership; variance and correctness summaries are computed before returning rewards to TRL.
+
+\textbf{Policy objective.} For completion token $t$ in response $i$, let $\rho_{it}=\exp(\log\pi_\theta(y_{it})-\log\pi_{\rm old}(y_{it}))$. The clipped surrogate is $u_{it}=\min(\rho_{it}A_i,\operatorname{clip}(\rho_{it},1-\epsilon_-,1+\epsilon_+)A_i)$. Completion masks exclude prompt/padding tokens. TRL minimizes the negative normalized surrogate, plus its reference-KL term when enabled. The registry checks the actual trainer configuration rather than selecting methods by label alone.
+
+\begingroup\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.1440\linewidth}>{\raggedright\arraybackslash}p{0.3510\linewidth}>{\raggedright\arraybackslash}p{0.4050\linewidth}}
+\caption{Objective differences at the implementation boundary; normalization is part of the intervention.}\\
+\toprule Method & Advantage /\allowbreak{} ratio & Loss aggregation \\
+\midrule\endfirsthead
+\toprule Method & Advantage /\allowbreak{} ratio & Loss aggregation \\
+\midrule\endhead
+\midrule\multicolumn{3}{r}{Continued on next page}\endfoot
+\bottomrule\endlastfoot
+GRPO & Group-standardized reward; token ratio & Normalize each response by its active completion length, then average responses \\
+Dr. GRPO & Centered reward, no group SD division; token ratio & Fixed maximum-completion-length denominator rather than observed response length \\
+DAPO-style & Group-standardized reward; token ratio & Normalize by active batch tokens; adapter corrects the denominator across accumulated optimizer slices \\
+GSPO & Group-standardized reward; sequence ratio from mean token log-ratio & Sequence-level importance weighting with the configured GRPO aggregation \\
+\end{longtable}\endgroup
+
+
+\textbf{Optimization and reference policy.} The implementation uses the pinned TRL 0.25.1 trainer, with one iteration per generation batch and AdamW updates on all policy parameters. FP32 weights retain small updates while BF16 autocast and gradient checkpointing reduce compute memory. Nonzero-KL arms create a frozen reference initialized from the same base checkpoint and verify that reference parameters remain frozen and KL is logged. At zero KL there is no additional reference model. Nonfinite loss, gradient, entropy or KL values fail the run rather than being hidden.
+
+\textbf{Supervised controls.} SFT serializes the same system/user prefix followed by the reference assistant response. Prompt labels are $-100$; only assistant tokens, including the chat-end marker, receive cross-entropy supervision. Overlength targets are rejected rather than silently cut. RFT replaces the human target with retained correctness-verified policy samples; a correct final answer does not certify the target proof. Common-stop evaluation accepts both end-of-text and chat-end tokens.
+
+\textbf{Continuation and evaluation.} Checkpoints preserve model, optimizer, scheduler, trainer and RNG state. Segment stops occur only after every optimizer slice of a rollout batch is consumed. Repeated-pass sampling addresses the epoch explicitly; restart gates compare sampled rollouts and parameter differences against an uninterrupted control. Evaluation stores raw candidates, answers, token lengths and truncation before aggregation. Completeness, prompt hashes and grader conventions are checked before a cohort is promoted into a result table; failed/partial cohorts do not become zero scores.
+
+\clearpage
+
 \section{Ablation Design and Evaluation Protocol}
 
 \begingroup\footnotesize\setlength{\tabcolsep}{3pt}
@@ -509,7 +539,44 @@ LoRA RFT, filtered & -- & 2625 \\
 \end{longtable}\endgroup
 
 
-The stopping audit confirms that adding the chat-end stop removes truncation in its five-example diagnostic; that diagnostic is a plumbing check, not a benchmark result.
+Original full SFT already uses the corrected common stopping convention in the benchmark tables above. The following audit separates the historical stopping bug from remaining answer errors and nontermination.
+
+\begingroup\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.2700\linewidth}>{\raggedright\arraybackslash}p{0.1260\linewidth}>{\raggedright\arraybackslash}p{0.1260\linewidth}>{\raggedright\arraybackslash}p{0.1260\linewidth}>{\raggedright\arraybackslash}p{0.1260\linewidth}>{\raggedright\arraybackslash}p{0.1260\linewidth}}
+\caption{Same original SFT checkpoint on the same 300 development problems, before and after stopping correction.}\\
+\toprule Stopping convention & Correct /\allowbreak{}300 & Accuracy \% & Truncated /\allowbreak{}300 & Truncation \% & Mean tokens \\
+\midrule\endfirsthead
+\toprule Stopping convention & Correct /\allowbreak{}300 & Accuracy \% & Truncated /\allowbreak{}300 & Truncation \% & Mean tokens \\
+\midrule\endhead
+\midrule\multicolumn{6}{r}{Continued on next page}\endfoot
+\bottomrule\endlastfoot
+Original EOS only & 120 & 40.00 & 292 & 97.33 & 2949.3 \\
+Common EOS + chat end & 121 & 40.33 & 71 & 23.67 & 886.1 \\
+\end{longtable}\endgroup
+
+
+The correction fixes 3 answers and breaks 2 against the original saved evaluation; no model was retrained. It reduces wasted continuation substantially but does not erase the SFT accuracy deficit. These are existing saved evaluations, not new generations or a new grading convention.
+
+\begingroup\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.2520\linewidth}>{\raggedright\arraybackslash}p{0.1170\linewidth}>{\raggedright\arraybackslash}p{0.1260\linewidth}>{\raggedright\arraybackslash}p{0.1260\linewidth}>{\raggedright\arraybackslash}p{0.1260\linewidth}>{\raggedright\arraybackslash}p{0.1530\linewidth}}
+\caption{Common-stop dev300 outcomes: truncation and incorrect answers overlap; counts retain historical saved grading.}\\
+\toprule Policy & Wrong /\allowbreak{}300 & Truncated /\allowbreak{}300 & Truncated correct & Truncated wrong & Nontruncated acc. \% \\
+\midrule\endfirsthead
+\toprule Policy & Wrong /\allowbreak{}300 & Truncated /\allowbreak{}300 & Truncated correct & Truncated wrong & Nontruncated acc. \% \\
+\midrule\endhead
+\midrule\multicolumn{6}{r}{Continued on next page}\endfoot
+\bottomrule\endlastfoot
+No RL & 165 & 95 & 1 & 94 & 65.37 \\
+GRPO LR 1e-6 & 83 & 7 & 0 & 7 & 74.06 \\
+GRPO LR 3e-6, 128 & 75 & 9 & 1 & 8 & 76.98 \\
+GRPO LR 3e-6, 512 & 93 & 9 & 1 & 8 & 70.79 \\
+Original SFT, corrected & 179 & 71 & 18 & 53 & 44.98 \\
+Follow-up full SFT & 169 & 209 & 89 & 120 & 46.15 \\
+Full RFT & 88 & 249 & 175 & 74 & 72.55 \\
+\end{longtable}\endgroup
+
+
+A response can contain a correct answer before hitting the token cap. Conversely, ending normally does not imply correct reasoning. Nontruncated accuracy conditions on a different model-dependent subset and must not replace all-problem benchmark accuracy or be treated as a matched comparison. Remaining SFT truncations already occur with the corrected stops; another EOS configuration change is not an established fix.
 
 \clearpage
 
@@ -1395,3 +1462,74 @@ Full RFT /\allowbreak{} AIME & 60 & 5 & 0 & 76.67 & 4 & 4 & 0 \\
 
 
 Stored mismatch sums the audit's two stored-label mismatch counters. These counters and closed-box criteria describe extraction reliability, not algebraic or proof-step validation. Reused controls and historical pre/post-stopping cohorts are kept in separate tables rather than pooled as independent experiments. Complete audits from unfinished campaigns are included only when their response denominator is complete; partial cohorts and a later recovered result do not retroactively change this dated snapshot.
+\clearpage\section{Problem-Level Reasoning and Failure Analysis}
+
+\subsection*{Overview: reasoning, answer commitment and stopping}
+
+We reviewed 17 deliberately selected problems from the fixed Dev300 cohort, covering all seven MATH categories and 12 policies. The cases include improvements, regressions, persistent errors and correct answers with flawed reasoning. They are retrospective illustrations, not a random sample: their proportions cannot estimate error prevalence. Saved prompts, references, IDs and stopping conventions match across policies; original grading is preserved.
+
+\begin{center}\includegraphics[width=\linewidth,height=.43\textheight,keepaspectratio]{figures/case_matrix.pdf}\end{center}
+
+The left panel records saved correctness; the right records response length, with cap hits marked. This separates a mathematical change from improved formatting or termination. A correct answer can precede truncation, and a normally ending response can still be mathematically wrong.
+
+\textbf{Full-cohort context, not selected-case frequencies.} Original GRPO fixes 89 baseline-wrong answers and breaks 7 baseline-correct answers on all 300 development problems. Tuned GRPO at 128 updates fixes 101 and breaks 11 versus no RL. Continuing that tuned policy to 512 updates fixes 15 but breaks 33 against its 128-update checkpoint. These are paired saved-grader transitions, not counts of specific reasoning-error mechanisms.
+
+\textbf{SFT interpretation.} The corrected original SFT evaluation has 121 correct answers and 71 cap hits; 18 cap-hit answers are correct. Corrected stopping greatly reduces wasted generation, but does not establish that the remaining accuracy deficit is caused by termination. The earlier SFT tables retain the full before/after breakdown.
+
+\clearpage\subsection*{Representative mathematical comparisons}
+
+\subsubsection*{A genuine algebraic correction}
+
+\textbf{Intermediate Algebra, Level 4.} Simply the expression
+\[\frac{(\sqrt{2} - 1)^{1 - \sqrt{3}}}{(\sqrt{2} + 1)^{1 + \sqrt{3}}},\]writing your answer as $a - b \sqrt{c},$ where $a,$ $b,$ and $c$ are positive integers, and $c$ is not divisible by the square of a prime.
+
+\textbf{Mathematical check.} Let $u=\sqrt{2}+1>0$. Since $\sqrt{2}-1=u^{-1}$, the quotient is $u^{-(1-\sqrt{3})-(1+\sqrt{3})}=u^{-2}=3-2\sqrt{2}$.
+
+\textbf{Observed difference.} The baseline moves a denominator power into a positive multiplying power and then invokes an unsupported identity for irrational exponents. It finally boxes 1 despite its own preceding expression. GRPO instead changes to a common positive base, subtracts the exponents correctly, and rationalizes the denominator.
+
+\textbf{Interpretation.} Unlike the extraction case, both responses terminate without truncation and disagree mathematically. This is evidence of improved reasoning on this particular problem, not merely a shorter or better-formatted response.
+
+\subsubsection*{A score improvement without a mathematical correction}
+
+\textbf{Number Theory, Level 3.} How many positive three-digit integers are divisible by both 11 and 5?
+
+\textbf{Mathematical check.} The common multiples are multiples of $55$. Their multipliers range from $2$ through $18$, giving $18-2+1=17$.
+
+\textbf{Observed difference.} The baseline identifies the correct endpoints and explicitly computes 17. Its saved extracted answer is an entire concluding sentence, and the historical grader marks it incorrect. GRPO boxes 17 and receives credit. The mathematics is already correct before training in this response.
+
+\textbf{Interpretation.} Count this as an extraction/formatting-sensitive score change, not a newly acquired counting strategy. Historical labels are preserved rather than silently corrected; a separate grader audit would be required to revise benchmark totals.
+
+\subsubsection*{Correct outcome, invalid explanation}
+
+\textbf{Prealgebra, Level 5.} The landlord of an apartment building needs to purchase enough digits to label all of the apartments from 100 through 125 on the first floor and 200 through 225 on the second floor. The digits can only be purchased in a package that contains one of each digit 0 through 9. How many packages must the landlord purchase?
+
+\textbf{Mathematical check.} Count digit occurrences across both floors. Digit 1 appears $26+10+3+10+3=52$ times; digit 2 appears $26+6+3+6+3=44$ times. The remaining digits occur fewer times, so 52 packages suffice and are necessary.
+
+\textbf{Observed difference.} The baseline and GRPO describe the correct counting algorithm but print impossible digit histograms and answer 26. RFT boxes the correct 52, yet claims the hundreds digit on the second floor is responsible for another 26 ones and also overcounts twos as 52. Its tens/units explanation is incorrect, and it repeats after the answer until truncation.
+
+\textbf{Interpretation.} This is a counterexample to equating final-answer reward with valid reasoning. The RFT response receives credit, but the displayed count of digit 1 is not a correct proof of that answer.
+
+\clearpage\subsection*{How ablations change individual solutions}
+
+The comparisons below use each intervention's own anchor: format and length rewards versus correctness-only GRPO at LR 3e-6; KL and clipping versus original GRPO at LR 1e-6; duration at the same LR 3e-6. They are not all otherwise identical training runs.
+
+\begingroup\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.1530\linewidth}>{\raggedright\arraybackslash}p{0.1800\linewidth}>{\raggedright\arraybackslash}p{0.2070\linewidth}>{\raggedright\arraybackslash}p{0.3600\linewidth}}
+\toprule Intervention & Problem & Observed change & Mathematical diagnosis \\
+\midrule\endfirsthead
+\toprule Intervention & Problem & Observed change & Mathematical diagnosis \\
+\midrule\endhead
+\midrule\multicolumn{4}{r}{Continued on next page}\endfoot
+\bottomrule\endlastfoot
+Format bonus & Three-digit counting & Wrong to correct: 43 & A set of permutations deduplicates repeated digits; a local gain despite worse aggregate accuracy. \\
+Length penalty & Exactly 14 divisors & 192 to 30: regression & 30 has eight divisors, not fourteen. The penalized response is longer here; shortening is not the established cause. \\
+Tighter clipping & Shifted quadratic & 28 to 26: regression & Correct substitution, but a fabricated expansion changes the linear coefficient from -17 to -19. \\
+KL beta 0.01 & arccos(cos(7)) & Correct to wrong & The policy rejects the valid principal value 7-2pi after an incorrect range check. \\
+128 to 512 updates & Common quadratic factor & Wrong to correct: 4 & Polynomial elimination replaces unsuccessful root hunting; the factor is x\textasciicircum{}2-2x+5. \\
+128 to 512 updates & Silverware probability & 9/\allowbreak{}34 to 1/\allowbreak{}4: regression & The sampling-space setup is right, but its arithmetic/\allowbreak{}output is not: 216/\allowbreak{}816 = 9/\allowbreak{}34. \\
+\end{longtable}\endgroup
+
+
+\textbf{Persistent gaps.} On a monic integer quartic, three integer roots force the fourth to be integral by Vieta's formula; several policies nevertheless list three as possible. On a rational involution, cancellation hides the exceptional parameter $k=-4/3$. These examples expose missing coefficient/domain constraints, not merely arithmetic or output-format problems.
+
+\textbf{What the evidence supports.} RL sometimes improves the actual mathematical strategy, not just response length. It also introduces local regressions, and exact-answer correctness does not certify every intermediate step. Generated code, output blocks and timeout messages are text, not executed tools. Independent arithmetic/symbolic checks support the reviewed claims; they are not formal verification of every completion.

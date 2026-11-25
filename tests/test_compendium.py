@@ -2,10 +2,34 @@ import unittest
 import json
 from pathlib import Path
 
-from scripts.paper.prepare_compendium import Ledger, audit_sample_count, escape, longtable, numeric_details, reference_only, summarize_training
+from scripts.paper.prepare_compendium import Ledger, audit_sample_count, case_study_appendix, completion_metrics, escape, longtable, numeric_details, reference_only, summarize_training
 
 
 class CompendiumTests(unittest.TestCase):
+    def test_case_studies_integrated_without_second_document(self):
+        source = Path(__file__).resolve().parents[1] / "docs/problem_case_studies/main.tex"
+        if not source.exists():
+            self.skipTest("Reviewed case-study source unavailable")
+        text = case_study_appendix(source)
+        self.assertEqual(text.count(r"\clearpage"), 3)
+        self.assertNotIn(r"\section*{Case ", text)
+        self.assertNotIn(r"\documentclass", text)
+        self.assertNotIn(r"\begin{document}", text)
+        self.assertNotIn(r"\end{document}", text)
+        self.assertIn("{figures/case_matrix.pdf}", text)
+        self.assertLess(len(text), 11000)
+        self.assertIn("A genuine algebraic correction", text)
+
+    def test_completion_errors_and_truncations_overlap(self):
+        rows = [{"correct": c, "truncated": t, "generated_tokens": 20} for c, t in
+                ((True, True), (False, True), (True, False), (False, False))]
+        m = completion_metrics(rows)
+        self.assertEqual((m["wrong"], m["truncated"], m["truncated_correct"], m["truncated_wrong"]), (2, 2, 1, 1))
+        self.assertEqual(m["nontruncated_accuracy"], .5)
+        self.assertIsNone(completion_metrics(rows[:2])["nontruncated_accuracy"])
+        with self.assertRaises(ValueError):
+            completion_metrics([])
+
     def test_tex_escaping(self):
         text = escape(r"a_b & 50% {x} #1 $2 \box")
         for fragment in (r"\_", r"\&", r"\%", r"\{", r"\#", r"\$", r"\textbackslash{}"):
@@ -54,7 +78,7 @@ class CompendiumTests(unittest.TestCase):
         archive = json.loads(path.read_text())
         records = archive["records"]
         content = render(records, archive["setup"])
-        self.assertEqual(content.count(r"\caption{"), 59)
+        self.assertEqual(content.count(r"\caption{"), 62)
         self.assertEqual(content.count(r"\captionof{figure}"), 3)
         self.assertLess(len(content), 140000)
         for unwanted in ("Metric path", "R0001", "Source Index", "Complete Aggregate Metric Details", "/scratch/", "seconds", "Seconds"):
@@ -76,6 +100,8 @@ class CompendiumTests(unittest.TestCase):
         self.assertEqual(archive["setup"]["overlaps"], {"train_dev": 0, "train_math500": 0, "dev_math500": 0})
         self.assertFalse(archive["setup"]["precision"]["peft"])
         self.assertIn("no LoRA adapter", content)
+        self.assertIn("From Rollouts to Parameter Updates", content)
+        self.assertIn("Prompt labels are $-100$", content)
         self.assertIn("Dev100 is contained within Dev300", content)
         for addition in ("DAPO-style", "GSPO", "Zero-variance groups", "All wrong", "Inference Subgroup Ablations", "Extraction and Grading Diagnostics", "Checkpoint and Restart Validation"):
             self.assertIn(addition, content)

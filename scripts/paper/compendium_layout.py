@@ -214,7 +214,23 @@ def render(records, setup):
     table("Mean completion length on complete external cohorts.",
           ["Adaptation", "MATH-500 tokens", "GSM8K-100 tokens"],
           [[names[m], *[f"{sft[m,b]['avg_generated_tokens']:.0f}" if (m,b) in sft else "--" for b in ("math500", "gsm8k100")]] for m in names], [.44, .28, .28])
-    prose("The stopping audit confirms that adding the chat-end stop removes truncation in its five-example diagnostic; that diagnostic is a plumbing check, not a benchmark result.")
+    prose("Original full SFT already uses the corrected common stopping convention in the benchmark tables above. The following audit separates the historical stopping bug from remaining answer errors and nontermination.")
+
+    stop = {r["label"]: r["metrics"] for r in rows("SFT stopping correction")}
+    if stop:
+        table("Same original SFT checkpoint on the same 300 development problems, before and after stopping correction.",
+              ["Stopping convention", "Correct /300", "Accuracy %", "Truncated /300", "Truncation %", "Mean tokens"],
+              [[name, m["correct"], pct(m["accuracy"]), m["truncated"], pct(m["truncation_rate"]), decimal(m["avg_generated_tokens"], 1)]
+               for name, m in stop.items()], [.30, .14, .14, .14, .14, .14])
+        m = stop["Common EOS + chat end"]
+        prose(f"The correction fixes {m['fixed_vs_original']} answers and breaks {m['broken_vs_original']} against the original saved evaluation; no model was retrained. It reduces wasted continuation substantially but does not erase the SFT accuracy deficit. These are existing saved evaluations, not new generations or a new grading convention.")
+    names = {"base": "No RL", "grpo": "GRPO LR 1e-6", "lr3": "GRPO LR 3e-6, 128", "step512": "GRPO LR 3e-6, 512",
+             "sft": "Original SFT, corrected", "sft_new": "Follow-up full SFT", "rft": "Full RFT"}
+    table("Common-stop dev300 outcomes: truncation and incorrect answers overlap; counts retain historical saved grading.",
+          ["Policy", "Wrong /300", "Truncated /300", "Truncated correct", "Truncated wrong", "Nontruncated acc. %"],
+          [[names[r["label"]], m["wrong"], m["truncated"], m["truncated_correct"], m["truncated_wrong"], pct(m["nontruncated_accuracy"])]
+           for r in rows("Common-stop completion audit") for m in [r["metrics"]]], [.28, .13, .14, .14, .14, .17])
+    prose("A response can contain a correct answer before hitting the token cap. Conversely, ending normally does not imply correct reasoning. Nontruncated accuracy conditions on a different model-dependent subset and must not replace all-problem benchmark accuracy or be treated as a matched comparison. Remaining SFT truncations already occur with the corrected stops; another EOS configuration change is not an established fix.")
 
     section("AIME Transfer by Year")
     values = []

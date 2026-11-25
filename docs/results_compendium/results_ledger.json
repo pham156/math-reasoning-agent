@@ -1,5 +1,5 @@
 {
-  "snapshot_date": "2026-11-24",
+  "snapshot_date": "2026-11-25",
   "records": [
     {
       "id": "R0001",
@@ -38595,6 +38595,197 @@
         "interpretation": "Greedy generation with an added chat-end stop would keep the same prefix. If no chat-end token is emitted, adding that stop token cannot fix that output. Small diagnostic only; existing evaluation/model unchanged."
       },
       "source": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/dev300_sft_20261013/termination_diagnostic/summary.json"
+    },
+    {
+      "id": "R0712",
+      "section": "Common-stop completion audit",
+      "label": "base",
+      "cohort": "dev300",
+      "metrics": {
+        "n": 300,
+        "correct": 135,
+        "wrong": 165,
+        "accuracy": 0.45,
+        "truncated": 95,
+        "truncation_rate": 0.31666666666666665,
+        "truncated_correct": 1,
+        "truncated_wrong": 94,
+        "nontruncated": 205,
+        "nontruncated_correct": 134,
+        "nontruncated_accuracy": 0.6536585365853659,
+        "avg_generated_tokens": 1440.12
+      },
+      "source": "/scratch/gilbreth/pham156/math-reasoning-agent/models/Qwen2.5-Math-1.5B"
+    },
+    {
+      "id": "R0713",
+      "section": "Common-stop completion audit",
+      "label": "grpo",
+      "cohort": "dev300",
+      "metrics": {
+        "n": 300,
+        "correct": 217,
+        "wrong": 83,
+        "accuracy": 0.7233333333333334,
+        "truncated": 7,
+        "truncation_rate": 0.023333333333333334,
+        "truncated_correct": 0,
+        "truncated_wrong": 7,
+        "nontruncated": 293,
+        "nontruncated_correct": 217,
+        "nontruncated_accuracy": 0.7406143344709898,
+        "avg_generated_tokens": 690.2433333333333
+      },
+      "source": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/pilot_20261013_000313/pilot/grpo/final_model"
+    },
+    {
+      "id": "R0714",
+      "section": "Common-stop completion audit",
+      "label": "lr3",
+      "cohort": "dev300",
+      "metrics": {
+        "n": 300,
+        "correct": 225,
+        "wrong": 75,
+        "accuracy": 0.75,
+        "truncated": 9,
+        "truncation_rate": 0.03,
+        "truncated_correct": 1,
+        "truncated_wrong": 8,
+        "nontruncated": 291,
+        "nontruncated_correct": 224,
+        "nontruncated_accuracy": 0.7697594501718213,
+        "avg_generated_tokens": 721.8266666666667
+      },
+      "source": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_lr_upper_20261016/runs/grpo_lr3e-06/final_model"
+    },
+    {
+      "id": "R0715",
+      "section": "Common-stop completion audit",
+      "label": "step512",
+      "cohort": "dev300",
+      "metrics": {
+        "n": 300,
+        "correct": 207,
+        "wrong": 93,
+        "accuracy": 0.69,
+        "truncated": 9,
+        "truncation_rate": 0.03,
+        "truncated_correct": 1,
+        "truncated_wrong": 8,
+        "nontruncated": 291,
+        "nontruncated_correct": 206,
+        "nontruncated_accuracy": 0.7079037800687286,
+        "avg_generated_tokens": 668.57
+      },
+      "source": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_extended_20261105/run/final_model"
+    },
+    {
+      "id": "R0716",
+      "section": "Common-stop completion audit",
+      "label": "sft",
+      "cohort": "dev300",
+      "metrics": {
+        "n": 300,
+        "correct": 121,
+        "wrong": 179,
+        "accuracy": 0.4033333333333333,
+        "truncated": 71,
+        "truncation_rate": 0.23666666666666666,
+        "truncated_correct": 18,
+        "truncated_wrong": 53,
+        "nontruncated": 229,
+        "nontruncated_correct": 103,
+        "nontruncated_accuracy": 0.4497816593886463,
+        "avg_generated_tokens": 886.15
+      },
+      "source": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/dev300_sft_20261013/sft/final_model"
+    },
+    {
+      "id": "R0717",
+      "section": "Common-stop completion audit",
+      "label": "sft_new",
+      "cohort": "dev300",
+      "metrics": {
+        "n": 300,
+        "correct": 131,
+        "wrong": 169,
+        "accuracy": 0.43666666666666665,
+        "truncated": 209,
+        "truncation_rate": 0.6966666666666667,
+        "truncated_correct": 89,
+        "truncated_wrong": 120,
+        "nontruncated": 91,
+        "nontruncated_correct": 42,
+        "nontruncated_accuracy": 0.46153846153846156,
+        "avg_generated_tokens": 2178.19
+      },
+      "source": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/sft_study_20261115/arms/gt_full/final_model"
+    },
+    {
+      "id": "R0718",
+      "section": "Common-stop completion audit",
+      "label": "rft",
+      "cohort": "dev300",
+      "metrics": {
+        "n": 300,
+        "correct": 212,
+        "wrong": 88,
+        "accuracy": 0.7066666666666667,
+        "truncated": 249,
+        "truncation_rate": 0.83,
+        "truncated_correct": 175,
+        "truncated_wrong": 74,
+        "nontruncated": 51,
+        "nontruncated_correct": 37,
+        "nontruncated_accuracy": 0.7254901960784313,
+        "avg_generated_tokens": 2674.516666666667
+      },
+      "source": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/sft_study_20261115/arms/rft_full/final_model"
+    },
+    {
+      "id": "R0719",
+      "section": "SFT stopping correction",
+      "label": "Original EOS only",
+      "cohort": "dev300; same checkpoint",
+      "metrics": {
+        "n": 300,
+        "correct": 120,
+        "wrong": 180,
+        "accuracy": 0.4,
+        "truncated": 292,
+        "truncation_rate": 0.9733333333333334,
+        "truncated_correct": 118,
+        "truncated_wrong": 174,
+        "nontruncated": 8,
+        "nontruncated_correct": 2,
+        "nontruncated_accuracy": 0.25,
+        "avg_generated_tokens": 2949.32
+      },
+      "source": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/dev300_sft_20261013/evaluation/sft.jsonl"
+    },
+    {
+      "id": "R0720",
+      "section": "SFT stopping correction",
+      "label": "Common EOS + chat end",
+      "cohort": "dev300; same checkpoint",
+      "metrics": {
+        "n": 300,
+        "correct": 121,
+        "wrong": 179,
+        "accuracy": 0.4033333333333333,
+        "truncated": 71,
+        "truncation_rate": 0.23666666666666666,
+        "truncated_correct": 18,
+        "truncated_wrong": 53,
+        "nontruncated": 229,
+        "nontruncated_correct": 103,
+        "nontruncated_accuracy": 0.4497816593886463,
+        "avg_generated_tokens": 886.15,
+        "fixed_vs_original": 3,
+        "broken_vs_original": 2
+      },
+      "source": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/dev300_sft_20261013/evaluation/sft.jsonl"
     }
   ],
   "sources": {
@@ -41254,6 +41445,218 @@
       "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/dev300_sft_20261013/termination_diagnostic/summary.json",
       "sha256": "c870a1841c4d56ee6da3cffa65dbd132f8bebcc25f83ce90cd4baa2bc63f6967"
     },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/baseline/shard_1_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/baseline/shard_1_config.json",
+      "sha256": "8c41c7917583dd88019eff65bd074f46dc70512df67df32d5218d0573017aff3"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/baseline/shard_2_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/baseline/shard_2_config.json",
+      "sha256": "3290cf9aaa130bbd78d5c8d27778bd85ff3a684c4f74ed61dcdf9a1fbb544250"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/grpo/shard_0.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/grpo/shard_0.jsonl",
+      "sha256": "394ba899524d9b89b2d3147aba0f8a81390d83069555d2d2415e43c4801c47bf"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/grpo/shard_0_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/grpo/shard_0_config.json",
+      "sha256": "1f763eae5846536458dc812a075c6d3b10385b2f4a4d718f2575f51cc25f1af2"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/grpo/shard_1.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/grpo/shard_1.jsonl",
+      "sha256": "a2df90157d71d56ef534a08319809aface543098205a1badda07e1b080d577e8"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/grpo/shard_1_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/grpo/shard_1_config.json",
+      "sha256": "f7db195da459f1181162abc8746de5d45af6ff201325484dbddb66db10f45869"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/grpo/shard_2.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/grpo/shard_2.jsonl",
+      "sha256": "54381369de7b3e9fe2c3fdd55865d66a36df64f5baacdc360e12cf35c17a5961"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/grpo/shard_2_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/grpo/shard_2_config.json",
+      "sha256": "1c0c86fa96217c16c0b8656ad221c7f3263995092177dc744833670f83b12071"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/dr_grpo/shard_0.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/dr_grpo/shard_0.jsonl",
+      "sha256": "a88975fffbd0cdbc9a6d1c1480f66745a5c348feedaaa24615e4aedd4264b657"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/dr_grpo/shard_0_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/dr_grpo/shard_0_config.json",
+      "sha256": "9440d19002d07dfa1683014ea9268463a8f2426113c2c756b4306ec770c9fb74"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/dr_grpo/shard_1.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/dr_grpo/shard_1.jsonl",
+      "sha256": "fb7841e2f4891cce1ffead94cd98769d4fa0e2c17d568fcaf8bc30157e1775c1"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/dr_grpo/shard_1_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/dr_grpo/shard_1_config.json",
+      "sha256": "5a55aeaee0b12f6a172f56e7c7799dc6121ed8a8b751d6ef18a312355798d32b"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/dr_grpo/shard_2.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/dr_grpo/shard_2.jsonl",
+      "sha256": "498a5c60d4afe0cba4a11cbee59732581a50f1d8d64d51becc3a5d04282b2e25"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/dr_grpo/shard_2_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/dr_grpo/shard_2_config.json",
+      "sha256": "8d2dc5719758e9b325a72d23e6d73416a206a43319afdd8abacfc3607540d28b"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/sft/shard_0.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/sft/shard_0.jsonl",
+      "sha256": "957790d70ccf0058b6831c95c2e7c62ab3de1f0c25d5f438b5536edf02a7944a"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/sft/shard_0_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/sft/shard_0_config.json",
+      "sha256": "056610e6250311b4425fb86bcdac4d559d92c4d736e36850ca6054bad8377b2d"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/sft/shard_1.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/sft/shard_1.jsonl",
+      "sha256": "73f6a1746cf30676475b0c5f74abd8ac607071e48c343caa2925d5c5b8f60d11"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/sft/shard_1_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/sft/shard_1_config.json",
+      "sha256": "46f6a76c893a32e417b2032f840048fa907c15033423f53f0233de953534d461"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/sft/shard_2.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/sft/shard_2.jsonl",
+      "sha256": "7e387a749148a21abda67a77274e44b2b0c9193260f61c9952b5dd0a7061071b"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/sft/shard_2_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/controls_exploration_20261014/greedy/sft/shard_2_config.json",
+      "sha256": "8982ea1969dd25b94ef75e02fc5869f1fe46a1a1492d52e4743284b5cfbe51fe"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_lr_upper_20261016/evaluations/grpo_lr3e-06/greedy/grpo/shard_1.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_lr_upper_20261016/evaluations/grpo_lr3e-06/greedy/grpo/shard_1.jsonl",
+      "sha256": "580c26cb5300fe03e4bca580ed027e69d856179e565eb03ce310760c119cc40a"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_lr_upper_20261016/evaluations/grpo_lr3e-06/greedy/grpo/shard_1_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_lr_upper_20261016/evaluations/grpo_lr3e-06/greedy/grpo/shard_1_config.json",
+      "sha256": "bce1ec17afb523c4b0cd3a5980da0831cdffadb53e64d3f13180f3c9e28730c4"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_lr_upper_20261016/evaluations/grpo_lr3e-06/greedy/grpo/shard_2.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_lr_upper_20261016/evaluations/grpo_lr3e-06/greedy/grpo/shard_2.jsonl",
+      "sha256": "47e9a350ddfdfa44229348d351ca93d42b909a35dda789512a0b230547dc6478"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_lr_upper_20261016/evaluations/grpo_lr3e-06/greedy/grpo/shard_2_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_lr_upper_20261016/evaluations/grpo_lr3e-06/greedy/grpo/shard_2_config.json",
+      "sha256": "68361eacdf0afc4ee67e720ff38145a2acc7deae5aed40fa195ead1d15a70696"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_extended_20261105/evaluations/step512/greedy/grpo/shard_1.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_extended_20261105/evaluations/step512/greedy/grpo/shard_1.jsonl",
+      "sha256": "c084a629b375d9ae7104aa1bc4ad5fa47f319930e7b654b40a31bd6eff7ca73f"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_extended_20261105/evaluations/step512/greedy/grpo/shard_1_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_extended_20261105/evaluations/step512/greedy/grpo/shard_1_config.json",
+      "sha256": "c11df94922f481bbcbef50db6d080745ed4d4664a1c38b760ff20ff5f197f9f5"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_extended_20261105/evaluations/step512/greedy/grpo/shard_2.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_extended_20261105/evaluations/step512/greedy/grpo/shard_2.jsonl",
+      "sha256": "c569a6d291b1137250b72a7d7d0128bfbd9f89ab445140a745d5998242491fb4"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_extended_20261105/evaluations/step512/greedy/grpo/shard_2_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_extended_20261105/evaluations/step512/greedy/grpo/shard_2_config.json",
+      "sha256": "727276b8d0728e5ab3dfd9961aa074f0291d8a10754d12bf8847929e7c2415c8"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/format_bonus_seed0/greedy/grpo/shard_0.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/format_bonus_seed0/greedy/grpo/shard_0.jsonl",
+      "sha256": "c7e78194372fc338f9b48984462e8eaa1d3500cf2a6872b2b1e6a6aa2e24a02b"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/format_bonus_seed0/greedy/grpo/shard_0_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/format_bonus_seed0/greedy/grpo/shard_0_config.json",
+      "sha256": "00b6a66d844c1a17b4ee76548e5726e15b90466972d43df1e809fe9ff624fe5e"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/format_bonus_seed0/greedy/grpo/shard_1.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/format_bonus_seed0/greedy/grpo/shard_1.jsonl",
+      "sha256": "fe604b538648644f2cee74c8091ef80500bb3a9294c96241175b50f888e4176e"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/format_bonus_seed0/greedy/grpo/shard_1_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/format_bonus_seed0/greedy/grpo/shard_1_config.json",
+      "sha256": "c7652ef95f1397340541452261aa8c2fa984cdb87b5b83b7b1ded4089a29f383"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/format_bonus_seed0/greedy/grpo/shard_2.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/format_bonus_seed0/greedy/grpo/shard_2.jsonl",
+      "sha256": "607e892acc6f2ee180e940570badfb4c4666fa928ad9ccfff4e483cc9822ff25"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/format_bonus_seed0/greedy/grpo/shard_2_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/format_bonus_seed0/greedy/grpo/shard_2_config.json",
+      "sha256": "53360fcc8fe2786bffa210ac05a8084c7ef2789999920956174254f009c5692f"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/length_penalty_seed0/greedy/grpo/shard_0.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/length_penalty_seed0/greedy/grpo/shard_0.jsonl",
+      "sha256": "4b1dbc1a75d11fb89893c8a2effe44d27e59ade5f9a56d13fdf33388f88993cd"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/length_penalty_seed0/greedy/grpo/shard_0_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/length_penalty_seed0/greedy/grpo/shard_0_config.json",
+      "sha256": "d45616c482e9d42af55e8ca2f7a9c29de7457179a6e9a094be2779e73095334a"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/length_penalty_seed0/greedy/grpo/shard_1.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/length_penalty_seed0/greedy/grpo/shard_1.jsonl",
+      "sha256": "1b98d726746850c32a3521e5b57cd51d8bfb1589d27c09c1add20fcd25784d4a"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/length_penalty_seed0/greedy/grpo/shard_1_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/length_penalty_seed0/greedy/grpo/shard_1_config.json",
+      "sha256": "daea4a084c69fa73c1435bc81cb50a92be1755cc473fa3afed5d8b632e0c36f5"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/length_penalty_seed0/greedy/grpo/shard_2.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/length_penalty_seed0/greedy/grpo/shard_2.jsonl",
+      "sha256": "54155e8c8835051bbeb3c9d25318616a7a433c36ae821067d4fe598d085b1e32"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/length_penalty_seed0/greedy/grpo/shard_2_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/reward_exploration_20261024/reward/evaluations/length_penalty_seed0/greedy/grpo/shard_2_config.json",
+      "sha256": "c1d9accde0b98b310323f923874d66b494c4021657fa015214c7b28b8577deea"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/kl_1e-02/greedy/grpo/shard_0.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/kl_1e-02/greedy/grpo/shard_0.jsonl",
+      "sha256": "14ce5de8f8925d238f06970e31865ccca8395847d84aa3f53825bf8c5cb6f1e9"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/kl_1e-02/greedy/grpo/shard_0_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/kl_1e-02/greedy/grpo/shard_0_config.json",
+      "sha256": "6d2fa4ed59fd0603b5da8aad932f1be0e1f3a1983c7688f697c266aacd51f0b6"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/kl_1e-02/greedy/grpo/shard_1.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/kl_1e-02/greedy/grpo/shard_1.jsonl",
+      "sha256": "3910b776c405bca615188f7b089101c7bdd671a9537b5550546e1e3acbdf260d"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/kl_1e-02/greedy/grpo/shard_1_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/kl_1e-02/greedy/grpo/shard_1_config.json",
+      "sha256": "aba6b4f3270a18212d80aa101679ff2f91e67b5d4c7478ee6742465ce9d141a5"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/kl_1e-02/greedy/grpo/shard_2.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/kl_1e-02/greedy/grpo/shard_2.jsonl",
+      "sha256": "94776c59170c8a1850b8f56a927712b57e47b34f38946b93bc571c7cfd10ae57"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/kl_1e-02/greedy/grpo/shard_2_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/kl_1e-02/greedy/grpo/shard_2_config.json",
+      "sha256": "524e5038d851cefac635ed65f54ccdf991bd0e8ffe6fa2c3fc06a54f4d9e4f29"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/clip_0p1/greedy/grpo/shard_0.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/clip_0p1/greedy/grpo/shard_0.jsonl",
+      "sha256": "b9678a2386242272dcad06b7bf4d9425ba7544df00e78e86292c336932549c75"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/clip_0p1/greedy/grpo/shard_0_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/clip_0p1/greedy/grpo/shard_0_config.json",
+      "sha256": "ee5013aad7074b9d18047907798d0cfde495e006c1870c42a7f71beaafccdc57"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/clip_0p1/greedy/grpo/shard_1.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/clip_0p1/greedy/grpo/shard_1.jsonl",
+      "sha256": "6e361ca723bed43c8b22d44a5ca8b2c6c7b7e0f3a2d3cd73119210b3998be36a"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/clip_0p1/greedy/grpo/shard_1_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/clip_0p1/greedy/grpo/shard_1_config.json",
+      "sha256": "589400f69d4b25d6af638204bea4593a23d8f66ae1d2bffdb40c43b2743fa1e8"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/clip_0p1/greedy/grpo/shard_2.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/clip_0p1/greedy/grpo/shard_2.jsonl",
+      "sha256": "6cd84bfc34fba859630f6c2d27ae6a5e69532d381b099646ee2dd132f59e3b6b"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/clip_0p1/greedy/grpo/shard_2_config.json": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/grpo_controls_20261017/evaluations/clip_0p1/greedy/grpo/shard_2_config.json",
+      "sha256": "def8f982e20601f7958c50bdc3a6c805281af61102b7f445a09cc3b92c9898f9"
+    },
+    "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/dev300_sft_20261013/evaluation/sft.jsonl": {
+      "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/dev300_sft_20261013/evaluation/sft.jsonl",
+      "sha256": "c122eff8948d93987b45bc4c92b516e22afe1018ae12ead9bf26b74b4791339c"
+    },
     "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/pilot_20261013_000313/pilot/grpo/run_config.json": {
       "path": "/scratch/gilbreth/pham156/math-reasoning-agent/outputs/rl_1p5b_study/pilot_20261013_000313/pilot/grpo/run_config.json",
       "sha256": "27fda404d6b70b56f368e1831e2a8aa058bad81a11885697a9b8d7a7edfef7ee"
@@ -41329,6 +41732,22 @@
     "/home/pham156/math-reasoning-agent/figures/completed_evaluations/heldout_accuracy.pdf": {
       "path": "/home/pham156/math-reasoning-agent/figures/completed_evaluations/heldout_accuracy.pdf",
       "sha256": "aee2f7622442337ce4ec073a936ef1a8406fa083969fae5914aecb5da3fe4132"
+    },
+    "/home/pham156/math-reasoning-agent/docs/problem_case_studies/case_matrix.pdf": {
+      "path": "/home/pham156/math-reasoning-agent/docs/problem_case_studies/case_matrix.pdf",
+      "sha256": "83e45c7593f7d98df473bb9057b4aa5808132c366af85332d971a9c3ef8815e4"
+    },
+    "/home/pham156/math-reasoning-agent/docs/problem_case_studies/main.tex": {
+      "path": "/home/pham156/math-reasoning-agent/docs/problem_case_studies/main.tex",
+      "sha256": "71f22c3ec2c503bf290fc47f6db6f569f86803e6e820c5c73452e5e961c01f4b"
+    },
+    "/home/pham156/math-reasoning-agent/docs/problem_case_studies/case_summaries.json": {
+      "path": "/home/pham156/math-reasoning-agent/docs/problem_case_studies/case_summaries.json",
+      "sha256": "951ba7e470dcf4356fd4b4fd1452fb35cb70c8f8549c84a6cc0faf742563d926"
+    },
+    "/home/pham156/math-reasoning-agent/docs/problem_case_studies/annotations.json": {
+      "path": "/home/pham156/math-reasoning-agent/docs/problem_case_studies/annotations.json",
+      "sha256": "a961e402ea6ed57354eb12871d4146bcddf4bf40823a2510f706c2d8bcf72471"
     }
   },
   "setup": {
@@ -41567,7 +41986,9 @@
     "Historical strict-grading audit": 31,
     "Paired uncertainty estimates": 30,
     "Response-level grading diagnostics": 123,
-    "Successful setup diagnostics": 9
+    "Successful setup diagnostics": 9,
+    "Common-stop completion audit": 7,
+    "SFT stopping correction": 2
   },
   "scope": "Available completed cohorts; fixed-reference runs; no failed/partial cohort scores."
 }

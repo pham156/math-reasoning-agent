@@ -10,6 +10,7 @@ Controlled post-training experiments on Qwen2.5-Math-1.5B: GRPO, Dr. GRPO, a DAP
 | Completed-results atlas | [All completed comparisons](docs/results_compendium/completed_results.pdf) | [LaTeX](docs/results_compendium/main.tex) |
 | Final report draft | [IEEE draft](docs/final/final_report.pdf) | [LaTeX](docs/final/main.tex) |
 | A0 poster draft | [Poster PDF](docs/poster/research_poster.pdf) | [SVG](docs/poster/research_poster.svg), [preview](docs/poster/research_poster.png) |
+| Problem-level analysis | Included in the results atlas, pages 30--32 | [Supporting case annotations](docs/problem_case_studies/annotations.json) |
 
 The documents are dated snapshots, not interchangeable summaries: the atlas includes more completed conditions than the earlier report drafts. Completed negative results are retained. Failed or partial benchmark cohorts are not promoted to full-benchmark scores. Final-answer correctness does not certify proof validity.
 

@@ -110,6 +110,53 @@ def reference_only(runs):
     return [r for r in runs if r.get("settings", {}).get("seed", 0) == 0]
 
 
+def completion_metrics(candidates):
+    if not candidates:
+        raise ValueError("Empty completion cohort")
+    if any(not isinstance(c[k], bool) for c in candidates for k in ("correct", "truncated")):
+        raise ValueError("Completion flags must be boolean")
+    n = len(candidates)
+    correct = sum(c["correct"] for c in candidates)
+    truncated = sum(c["truncated"] for c in candidates)
+    truncated_correct = sum(c["correct"] and c["truncated"] for c in candidates)
+    nontruncated = n - truncated
+    return {"n": n, "correct": correct, "wrong": n - correct, "accuracy": correct / n,
+            "truncated": truncated, "truncation_rate": truncated / n,
+            "truncated_correct": truncated_correct, "truncated_wrong": truncated - truncated_correct,
+            "nontruncated": nontruncated, "nontruncated_correct": correct - truncated_correct,
+            "nontruncated_accuracy": (correct - truncated_correct) / nontruncated if nontruncated else None,
+            "avg_generated_tokens": fmean(c["generated_tokens"] for c in candidates)}
+
+
+def gather_completion_audit(root, ledger):
+    from src.evaluation.problem_case_studies import collect, candidate
+
+    policies, configs, sources = collect(root)
+    ledger.sources.update({p: {"path": p, "sha256": sha} for p, sha in sources.items()})
+    for name in ("base", "grpo", "lr3", "step512", "sft", "sft_new", "rft"):
+        metrics = completion_metrics([candidate(policies[name], k) for k in policies[name]])
+        ledger.add("Common-stop completion audit", name, "dev300", metrics, configs[name]["model_path"], 300)
+    path = root / "dev300_sft_20261013/evaluation/sft.jsonl"
+    raw = path.read_bytes()
+    ledger.sources[str(path)] = {"path": str(path), "sha256": hashlib.sha256(raw).hexdigest()}
+    original = [json.loads(line) for line in raw.splitlines() if line.strip()]
+    old = {r["source_index"]: r for r in original}
+    corrected = policies["sft"]
+    if len(original) != 300 or len(old) != 300 or old.keys() != corrected.keys():
+        raise ValueError("Unmatched original/corrected SFT cohorts")
+    for key, row in old.items():
+        if any(row[f] != corrected[key][f] for f in ("problem", "reference_answer", "type", "level")):
+            raise ValueError("SFT stopping comparison has different problems")
+        if row["model_path"] != configs["sft"]["model_path"]:
+            raise ValueError("SFT stopping comparison has different checkpoints")
+    before = completion_metrics(original)
+    after = completion_metrics([candidate(corrected, k) for k in old])
+    after["fixed_vs_original"] = sum(not r["correct"] and candidate(corrected, k)["correct"] for k, r in old.items())
+    after["broken_vs_original"] = sum(r["correct"] and not candidate(corrected, k)["correct"] for k, r in old.items())
+    for label, metrics in (("Original EOS only", before), ("Common EOS + chat end", after)):
+        ledger.add("SFT stopping correction", label, "dev300; same checkpoint", metrics, path, 300)
+
+
 def audit_sample_count(path):
     if "smoke" in path or "rft_data" in path or "seed1" in path:
         return None
@@ -343,8 +390,44 @@ def gather(root):
         ledger.add("Successful setup diagnostics", row["algorithm"], "initial 20-problem diagnostic", row, pilot_path, 20)
     diagnostic = source("dev300_sft_20261013/termination_diagnostic/summary.json")
     ledger.add("Successful setup diagnostics", "SFT chat-end audit", "five examples; not benchmark", ledger.read(diagnostic), diagnostic, 5)
+    gather_completion_audit(root, ledger)
     ledger.setup = gather_setup(root, ledger)
     return ledger
+
+
+def case_study_appendix(source):
+    summary = json.loads(source.with_name("case_summaries.json").read_text())
+    if len(summary["cases"]) != 17 or not all(summary["independent_math_checks"].values()):
+        raise ValueError("Incomplete reviewed case-study evidence")
+    cases = {c["source_index"]: c for c in summary["cases"]}
+    text = [r"\clearpage\section{Problem-Level Reasoning and Failure Analysis}",
+            r"\subsection*{Overview: reasoning, answer commitment and stopping}",
+            "We reviewed 17 deliberately selected problems from the fixed Dev300 cohort, covering all seven MATH categories and 12 policies. The cases include improvements, regressions, persistent errors and correct answers with flawed reasoning. They are retrospective illustrations, not a random sample: their proportions cannot estimate error prevalence. Saved prompts, references, IDs and stopping conventions match across policies; original grading is preserved.",
+            r"\begin{center}\includegraphics[width=\linewidth,height=.43\textheight,keepaspectratio]{figures/case_matrix.pdf}\end{center}",
+            "The left panel records saved correctness; the right records response length, with cap hits marked. This separates a mathematical change from improved formatting or termination. A correct answer can precede truncation, and a normally ending response can still be mathematically wrong.",
+            r"\textbf{Full-cohort context, not selected-case frequencies.} Original GRPO fixes 89 baseline-wrong answers and breaks 7 baseline-correct answers on all 300 development problems. Tuned GRPO at 128 updates fixes 101 and breaks 11 versus no RL. Continuing that tuned policy to 512 updates fixes 15 but breaks 33 against its 128-update checkpoint. These are paired saved-grader transitions, not counts of specific reasoning-error mechanisms.",
+            r"\textbf{SFT interpretation.} The corrected original SFT evaluation has 121 correct answers and 71 cap hits; 18 cap-hit answers are correct. Corrected stopping greatly reduces wasted generation, but does not establish that the remaining accuracy deficit is caused by termination. The earlier SFT tables retain the full before/after breakdown.",
+            r"\clearpage\subsection*{Representative mathematical comparisons}"]
+    for key, heading in ((2035, "A genuine algebraic correction"), (629, "A score improvement without a mathematical correction"),
+                         (5292, "Correct outcome, invalid explanation")):
+        case = cases[key]
+        text += [r"\subsubsection*{" + heading + "}",
+                 r"\textbf{" + escape(case["type"] + ", " + case["level"]) + r".} " + case["problem"],
+                 r"\textbf{Mathematical check.} " + case["reference_reasoning"],
+                 r"\textbf{Observed difference.} " + case["analysis"],
+                 r"\textbf{Interpretation.} " + case["interpretation"]]
+    text += [r"\clearpage\subsection*{How ablations change individual solutions}",
+             "The comparisons below use each intervention's own anchor: format and length rewards versus correctness-only GRPO at LR 3e-6; KL and clipping versus original GRPO at LR 1e-6; duration at the same LR 3e-6. They are not all otherwise identical training runs.",
+             longtable(["Intervention", "Problem", "Observed change", "Mathematical diagnosis"], [
+                 ["Format bonus", "Three-digit counting", "Wrong to correct: 43", "A set of permutations deduplicates repeated digits; a local gain despite worse aggregate accuracy."],
+                 ["Length penalty", "Exactly 14 divisors", "192 to 30: regression", "30 has eight divisors, not fourteen. The penalized response is longer here; shortening is not the established cause."],
+                 ["Tighter clipping", "Shifted quadratic", "28 to 26: regression", "Correct substitution, but a fabricated expansion changes the linear coefficient from -17 to -19."],
+                 ["KL beta 0.01", "arccos(cos(7))", "Correct to wrong", "The policy rejects the valid principal value 7-2pi after an incorrect range check."],
+                 ["128 to 512 updates", "Common quadratic factor", "Wrong to correct: 4", "Polynomial elimination replaces unsuccessful root hunting; the factor is x^2-2x+5."],
+                 ["128 to 512 updates", "Silverware probability", "9/34 to 1/4: regression", "The sampling-space setup is right, but its arithmetic/output is not: 216/816 = 9/34."]], [.17, .20, .23, .40]),
+             r"\textbf{Persistent gaps.} On a monic integer quartic, three integer roots force the fourth to be integral by Vieta's formula; several policies nevertheless list three as possible. On a rational involution, cancellation hides the exceptional parameter $k=-4/3$. These examples expose missing coefficient/domain constraints, not merely arithmetic or output-format problems.",
+             r"\textbf{What the evidence supports.} RL sometimes improves the actual mathematical strategy, not just response length. It also introduces local regressions, and exact-answer correctness does not certify every intermediate step. Generated code, output blocks and timeout messages are text, not executed tools. Independent arithmetic/symbolic checks support the reviewed claims; they are not formal verification of every completion."]
+    return "\n\n".join(text) + "\n"
 
 
 def generate(ledger, destination, snapshot):
@@ -355,11 +438,15 @@ def generate(ledger, destination, snapshot):
     figures.mkdir(parents=True, exist_ok=True)
     figure_specs = [(project_root() / "docs/final/figures/method_dynamics.pdf", "initial_training.pdf"),
                     (project_root() / "docs/final/figures/extended_training.pdf", "extended_training.pdf"),
-                    (project_root() / "figures/completed_evaluations/heldout_accuracy.pdf", "heldout_accuracy.pdf")]
+                    (project_root() / "figures/completed_evaluations/heldout_accuracy.pdf", "heldout_accuracy.pdf"),
+                    (project_root() / "docs/problem_case_studies/case_matrix.pdf", "case_matrix.pdf")]
     for source, filename in figure_specs:
         shutil.copy2(source, figures / filename)
         ledger.sources[str(source)] = {"path": str(source), "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}
-    content = render(ledger.records, ledger.setup)
+    case_source = project_root() / "docs/problem_case_studies/main.tex"
+    for path in (case_source, case_source.with_name("case_summaries.json"), case_source.with_name("annotations.json")):
+        ledger.sources[str(path)] = {"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+    content = render(ledger.records, ledger.setup) + case_study_appendix(case_source)
     (generated / "results.tex").write_text(content)
     main = (destination / "main.tex").read_text()
     (destination / "all_results.tex").write_text(main.replace(r"\input{generated/results.tex}", content))

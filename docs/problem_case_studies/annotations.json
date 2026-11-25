@@ -1,0 +1,260 @@
+{
+  "selection": "Purposive retrospective selection from the same 300 development problems; 17 illustrative cases, not a random error sample or a held-out method-ranking test.",
+  "cases": [
+    {
+      "source_index": 4083,
+      "title": "Answering the intended quadratic instead of degenerating",
+      "mechanism": "Completion and instruction following",
+      "policies": ["base", "grpo", "sft", "step512"],
+      "expected": {"base": false, "grpo": true, "sft": true, "step512": true},
+      "reference_reasoning": "$x^2-10x+24=(x-5)^2-1$, so the minimizing input is $x=5$, not the minimum function value $-1$.",
+      "analysis": "The baseline replaces the requested minimum problem with a different maximum problem, then repeats a marker until the 3000-token limit. GRPO uses a derivative and positive second derivative; SFT completes the square and distinguishes the minimizing input from the attained value. Both approaches support the correct answer.",
+      "interpretation": "This is a clear completion/instruction-following improvement, but it does not show that the baseline lacks the mathematical ability to minimize a quadratic. The observed failure never reaches a meaningful solution attempt.",
+      "evidence": [
+        {"policy": "base", "quote": "What is the maximum value of $y= x^2 + 10x - 24$ in the domain $-10\\leq x\\leq 15$?.Highlight"},
+        {"policy": "grpo", "quote": "f_prime = sp.diff(f, x)"},
+        {"policy": "sft", "quote": "(x-5)^2-1"}
+      ]
+    },
+    {
+      "source_index": 629,
+      "title": "An apparent RL fix that is actually answer extraction",
+      "mechanism": "Grading and answer formatting",
+      "policies": ["base", "grpo", "sft", "lr3"],
+      "expected": {"base": false, "grpo": true, "lr3": true},
+      "reference_reasoning": "The common multiples are multiples of $55$. Their multipliers range from $2$ through $18$, giving $18-2+1=17$.",
+      "analysis": "The baseline identifies the correct endpoints and explicitly computes 17. Its saved extracted answer is an entire concluding sentence, and the historical grader marks it incorrect. GRPO boxes 17 and receives credit. The mathematics is already correct before training in this response.",
+      "interpretation": "Count this as an extraction/formatting-sensitive score change, not a newly acquired counting strategy. Historical labels are preserved rather than silently corrected; a separate grader audit would be required to revise benchmark totals.",
+      "evidence": [
+        {"policy": "base", "quote": "(990 - 110) / 55 + 1 = 16 + 1 = 17"},
+        {"policy": "base", "quote": "Therefore, there are 17 positive three-digit integers that are divisible by both 11 and 5."},
+        {"policy": "grpo", "quote": "\\boxed{17}"}
+      ]
+    },
+    {
+      "source_index": 2035,
+      "title": "A genuine correction of exponent manipulation",
+      "mechanism": "Algebraic reasoning improvement",
+      "policies": ["base", "grpo", "sft", "lr3"],
+      "expected": {"base": false, "grpo": true, "lr3": true},
+      "reference_reasoning": "Let $u=\\sqrt{2}+1>0$. Since $\\sqrt{2}-1=u^{-1}$, the quotient is $u^{-(1-\\sqrt{3})-(1+\\sqrt{3})}=u^{-2}=3-2\\sqrt{2}$.",
+      "analysis": "The baseline moves a denominator power into a positive multiplying power and then invokes an unsupported identity for irrational exponents. It finally boxes 1 despite its own preceding expression. GRPO instead changes to a common positive base, subtracts the exponents correctly, and rationalizes the denominator.",
+      "interpretation": "Unlike the extraction case, both responses terminate without truncation and disagree mathematically. This is evidence of improved reasoning on this particular problem, not merely a shorter or better-formatted response.",
+      "evidence": [
+        {"policy": "base", "quote": "are conjugates of each other"},
+        {"policy": "base", "quote": "\\boxed{1}"},
+        {"policy": "grpo", "quote": "(\\sqrt{2} + 1)^{-2}"}
+      ]
+    },
+    {
+      "source_index": 1733,
+      "title": "The right range strategy, followed by a sign error",
+      "mechanism": "Arithmetic regression and learning-rate sensitivity",
+      "policies": ["base", "grpo", "sft", "lr3"],
+      "expected": {"base": true, "grpo": false, "sft": false, "lr3": true},
+      "reference_reasoning": "The denominator is always positive. Setting $y=f(x)$ gives $yx^2-(y+1)x+y=0$ with discriminant $-3y^2+2y+1\\geq0$. Hence $-1/3\\leq y\\leq1$; the degenerate case $y=0$ is attained at $x=0$, and the endpoints occur at $x=-1,1$.",
+      "analysis": "The baseline obtains the correct interval. GRPO reaches the same discriminant but evaluates the negative root as positive 1/3. Its generated verification output repeats the incorrect interval. SFT introduces a different error immediately: its reciprocal rewrite is not the original function. The higher-LR GRPO response solves the inequality correctly.",
+      "interpretation": "Training can preserve the overall method while damaging a local arithmetic step. The LR comparison repairs this instance, but it does not establish that increasing LR always repairs arithmetic.",
+      "evidence": [
+        {"policy": "grpo", "quote": "y = \\frac{2}{6} = \\frac{1}{3}"},
+        {"policy": "sft", "quote": "\\frac{1}{x - \\frac{1}{x} + 1}"},
+        {"policy": "lr3", "quote": "y = -\\frac{1}{3}"}
+      ]
+    },
+    {
+      "source_index": 628,
+      "title": "Correct code logic paired with an incorrect generated output",
+      "mechanism": "Code-output inconsistency",
+      "policies": ["base", "grpo", "sft", "lr3"],
+      "expected": {"base": true, "grpo": false, "lr3": true},
+      "reference_reasoning": "$3737=8\\cdot467+1$, so $-3737\\equiv-1\\equiv7\\pmod8$.",
+      "analysis": "The baseline returns 7. GRPO writes the correct procedure: calculate the positive remainder and subtract it from 8. It then claims that this code outputs 1, and boxes 1. The higher-LR response explicitly computes the positive remainder as 1 and performs the negative-residue adjustment correctly.",
+      "interpretation": "This is not evidence that an external Python interpreter failed. The evaluation did not execute the displayed code. A generated output block can contradict a correct algorithm and still determine the final answer.",
+      "evidence": [
+        {"policy": "grpo", "quote": "result = 8 - remainder_3737"},
+        {"policy": "grpo", "quote": "```output\n1\n```"},
+        {"policy": "lr3", "quote": "-1 + 8 = 7"}
+      ]
+    },
+    {
+      "source_index": 2117,
+      "title": "Functional equations: solving the right system incorrectly",
+      "mechanism": "Coefficient loss and unsupported verification",
+      "policies": ["base", "grpo", "sft", "lr3", "rft"],
+      "expected": {"base": true, "grpo": false, "lr3": false, "rft": true},
+      "reference_reasoning": "Substitute $1/x$ into the equation and eliminate $f(1/x)$. The result is $5f(x)+2x^3=3/x^2$, giving $f(-2)=(3+64)/20=67/20$.",
+      "analysis": "The baseline derives the correct system. Original GRPO presents a plausible symbolic solver but claims its output is -1/2. Higher-LR GRPO makes an explicit algebra error: multiplying $2x$ by $-2f(x)/x$ should produce $-4f(x)$, but the response uses $-2f(x)$ and obtains a denominator of 7 rather than 5. RFT derives the correct coefficient and answer, then repeats beyond the answer to the cap.",
+      "interpretation": "Higher LR does not repair every regression. RFT recovers the correct calculation here, but its correct score does not imply reliable termination or more efficient reasoning.",
+      "evidence": [
+        {"policy": "grpo", "quote": "```output\n-1/2\n```"},
+        {"policy": "lr3", "quote": "\\frac{2x^3 - 2f(x)}{3}"},
+        {"policy": "rft", "quote": "5f(x) + 2x^3"}
+      ]
+    },
+    {
+      "source_index": 3054,
+      "title": "SFT preserves an exact radical that RL rounds away",
+      "mechanism": "Exact-answer representation",
+      "policies": ["base", "grpo", "sft", "lr3"],
+      "expected": {"base": true, "grpo": false, "sft": true, "lr3": true},
+      "reference_reasoning": "Each leg of the journey has length $\\sqrt{(-4)^2+5^2}=\\sqrt{41}$, so the exact total is $2\\sqrt{41}$.",
+      "analysis": "The baseline and SFT use the correct two-segment distance calculation. The baseline then degenerates after its correct answer; SFT ends compactly. GRPO computes the same geometry numerically but boxes the rounded decimal 12.81. Higher-LR GRPO retains the exact radical.",
+      "interpretation": "The GRPO failure is not an incorrect distance formula. It is loss of exactness under the saved grading protocol. This is also a concrete case where SFT is shorter and receives credit while original GRPO does not.",
+      "evidence": [
+        {"policy": "grpo", "quote": "\\boxed{12.81}"},
+        {"policy": "sft", "quote": "\\boxed{2\\sqrt{41}}"},
+        {"policy": "lr3", "quote": "Therefore, the exact distance is:"}
+      ]
+    },
+    {
+      "source_index": 5292,
+      "title": "RFT reaches the correct package count through a flawed explanation",
+      "mechanism": "Correct outcome with invalid intermediate reasoning",
+      "policies": ["base", "grpo", "sft", "rft"],
+      "expected": {"base": false, "grpo": false, "rft": true},
+      "reference_reasoning": "Count digit occurrences across both floors. Digit 1 appears $26+10+3+10+3=52$ times; digit 2 appears $26+6+3+6+3=44$ times. The remaining digits occur fewer times, so 52 packages suffice and are necessary.",
+      "analysis": "The baseline and GRPO describe the correct counting algorithm but print impossible digit histograms and answer 26. RFT boxes the correct 52, yet claims the hundreds digit on the second floor is responsible for another 26 ones and also overcounts twos as 52. Its tens/units explanation is incorrect, and it repeats after the answer until truncation.",
+      "interpretation": "This is a counterexample to equating final-answer reward with valid reasoning. The RFT response receives credit, but the displayed count of digit 1 is not a correct proof of that answer.",
+      "evidence": [
+        {"policy": "base", "quote": "[6, 26, 26, 26, 26, 26, 26, 26, 26, 26]"},
+        {"policy": "rft", "quote": "The digit 1 appears 26 (from 100-125) + 26 (from 200-225) = 52 times."},
+        {"policy": "rft", "quote": "The digit 2 appears 26 (from 100-125) + 26 (from 200-225) = 52 times."}
+      ]
+    },
+    {
+      "source_index": 945,
+      "title": "A persistent proof gap: three integer roots force the fourth",
+      "mechanism": "Unjustified existence and missing coefficient constraint",
+      "policies": ["base", "grpo", "sft", "lr3", "step512"],
+      "expected": {"base": false, "grpo": false, "lr3": false, "step512": false},
+      "reference_reasoning": "Three integer roots of a monic integer quartic force the fourth to be an integer by Vieta's sum formula. Thus exactly three is impossible. Examples for 0, 1, 2, and 4 integer roots are $x^4+1$, $x(x^3-2)$, $x^2(x^2+1)$, and $x^4$, respectively.",
+      "analysis": "The baseline treats every count from 0 to 4 as automatically achievable. GRPO supplies contradictory examples, including a four-integer-root polynomial as evidence for exactly three. The higher-LR response uses a degree-five polynomial as its example for a quartic. The selected longer-training response remains wrong by the saved final-answer label.",
+      "interpretation": "More fluent case enumeration is not a proof of existence. The reviewed traces fail to enforce the relationship between integer coefficients and the remaining root; the final-answer reward alone does not identify that missing theorem application.",
+      "evidence": [
+        {"policy": "base", "quote": "it is possible for it to have any of these values"},
+        {"policy": "grpo", "quote": "but if we remove one root"},
+        {"policy": "lr3", "quote": "(x-1)^3(x^2 + 4x + 11)"}
+      ]
+    },
+    {
+      "source_index": 1398,
+      "title": "Symbolic cancellation without checking invertibility",
+      "mechanism": "Missing domain and nondegeneracy conditions",
+      "policies": ["base", "grpo", "sft", "lr3", "step512"],
+      "expected": {"base": false, "grpo": false, "lr3": false, "step512": false},
+      "reference_reasoning": "The composition reduces to $(4+3k)x/(4+3k)$ only when $4+3k\\ne0$. At $k=-4/3$ the original map is constant on its domain and not invertible. At $k=0$, $f(x)=-x-3/2$ is a valid involution. Hence all real $k$ except $-4/3$ work on the corresponding natural domains.",
+      "analysis": "The baseline and GRPO derive the useful composition but cancel the factor that carries the exceptional parameter value. They exclude k=0 instead, incorrectly treating an everywhere-defined affine map as invalid. Higher-LR GRPO repeats the wrong restriction. The selected later checkpoint is still wrong by its saved label.",
+      "interpretation": "The central failure is not failure to manipulate the fraction; it is failure to track the conditions under which the manipulation and inverse exist. Longer training does not automatically repair this example.",
+      "evidence": [
+        {"policy": "base", "quote": "\\frac{(4 + 3k)x}{3k + 4}"},
+        {"policy": "grpo", "quote": "the only constraint is \\( k \\neq 0 \\)"},
+        {"policy": "lr3", "quote": "The denominator \\( kx - 2 \\) should not be zero for any \\( x \\), which means \\( k \\neq 0 \\)."}
+      ]
+    },
+    {
+      "source_index": 2296,
+      "title": "All answers are correct, but the verification snippets are not",
+      "mechanism": "Outcome correctness versus trace validity",
+      "policies": ["base", "grpo", "sft", "lr3"],
+      "expected": {"base": true, "grpo": true, "sft": true, "lr3": true},
+      "reference_reasoning": "The median to the base of an isosceles triangle is perpendicular to it. Therefore $AM^2=8^2-5^2=39$, so $AM=\\sqrt{39}$.",
+      "analysis": "The baseline and GRPO give the correct Apollonius derivation, but their later Python formula yields a squared median of 51.5, not 39. The higher-LR code gives squared median 39 and is consistent. SFT's final Pythagorean argument is correct, although its generated Asymptote coordinates do not realize the stated side lengths.",
+      "interpretation": "Correct final answers can coexist with incorrect auxiliary code or diagrams. Trace-level review distinguishes a valid mathematical derivation from a falsely reassuring verification block.",
+      "evidence": [
+        {"policy": "base", "quote": "AM_squared = (AB**2 + AC**2 - (BC/2)**2) / 2"},
+        {"policy": "lr3", "quote": "median_AM_squared = (AB**2 + AC**2 - (BC**2 / 2)) / 2"},
+        {"policy": "sft", "quote": "AM^2 + 5^2 = 8^2"}
+      ]
+    },
+    {
+      "source_index": 7456,
+      "title": "A format-reward run changes the counting method, not just the box",
+      "mechanism": "Reward-ablation improvement on one instance",
+      "policies": ["base", "grpo", "sft", "lr3", "format"],
+      "expected": {"base": false, "grpo": false, "lr3": false, "format": true},
+      "reference_reasoning": "There are $4^3=64$ strings over the four distinct digits. Ten overuse digit 2, ten overuse digit 3, and one is 666. These exclusions are disjoint, giving $64-10-10-1=43$.",
+      "analysis": "The baseline explicitly misreads the available multiplicity of digit 5 and includes forbidden strings. GRPO's position-based counting does not consistently deduplicate repeated copies. The format-bonus policy instead forms a set of permutations and returns 43; independent enumeration confirms this number.",
+      "interpretation": "The changed response is mathematically better here, not merely better formatted. This does not show that the format bonus generally helps: it is a selected local improvement within a condition whose aggregate result was worse than its correctness-only anchor.",
+      "evidence": [
+        {"policy": "base", "quote": "we can use at most one 5"},
+        {"policy": "format", "quote": "unique_permutations = set(permutations(digits, 3))"},
+        {"policy": "format", "quote": "\\boxed{43}"}
+      ]
+    },
+    {
+      "source_index": 277,
+      "title": "Length shaping introduces an inadmissible divisor pattern",
+      "mechanism": "Reward-ablation regression and flawed correct traces",
+      "policies": ["base", "grpo", "sft", "lr3", "length"],
+      "expected": {"grpo": true, "lr3": true, "length": false},
+      "reference_reasoning": "Exactly 14 divisors allows exponents 13 or the pair 6,1. The minimal candidates are $2^{13}=8192$ and $2^6\\cdot3=192$, so the minimum is 192. A square-free product of three primes has 8 divisors, not 14.",
+      "analysis": "The correctness-only higher-LR policy returns 192, but its explanation already contains extraneous divisor forms and bad candidate arithmetic. The length-penalty response admits the square-free candidate 30 and claims a generated divisor-count list makes all candidates valid. Direct counting shows 30 has only eight divisors.",
+      "interpretation": "The ablation changes this final answer from right to wrong, but the anchor's reasoning was not fully sound either. The length-penalty response is actually longer here; the local error should not be attributed to shorter reasoning without evidence.",
+      "evidence": [
+        {"policy": "lr3", "quote": "n = p_1^1 p_2^1 p_3^6"},
+        {"policy": "length", "quote": "n = 2^1 \\times 3^1 \\times 5^1 = 30"},
+        {"policy": "length", "quote": "[14, 14, 14, 14]"}
+      ]
+    },
+    {
+      "source_index": 1928,
+      "title": "Tighter clipping changes a correct expansion into a wrong one",
+      "mechanism": "Clipping-ablation regression",
+      "policies": ["base", "grpo", "sft", "clip"],
+      "expected": {"base": true, "grpo": true, "clip": false},
+      "reference_reasoning": "A right shift gives $2(x-4)^2-(x-4)+7=2x^2-17x+43$, whose coefficient sum is 28. Equivalently evaluate the original function at $1-4=-3$.",
+      "analysis": "The original GRPO response expands the shifted polynomial correctly. The tighter-clipping policy writes a correct symbolic substitution but claims the expansion is $2x^2-19x+43$, producing 26. This is another inconsistency between generated code and generated output.",
+      "interpretation": "This illustrates a local arithmetic regression under the clipping intervention. One chosen example cannot establish a global mechanism linking tighter clipping to expansion errors.",
+      "evidence": [
+        {"policy": "grpo", "quote": "y = 2x^2 - 17x + 43"},
+        {"policy": "clip", "quote": "shifted_function = original_function.subs(x, x - 4)"},
+        {"policy": "clip", "quote": "2*x**2 - 19*x + 43"}
+      ]
+    },
+    {
+      "source_index": 6608,
+      "title": "A KL-regularized policy rejects an already valid principal value",
+      "mechanism": "KL-ablation regression and incorrect range check",
+      "policies": ["base", "grpo", "sft", "kl", "step512"],
+      "expected": {"grpo": true, "kl": false, "step512": true},
+      "reference_reasoning": "$0<7-2\\pi<\\pi$ and cosine is $2\\pi$-periodic, so the principal inverse-cosine value is $7-2\\pi$.",
+      "analysis": "GRPO obtains the correct principal value. The KL policy first generates that same correct value, then falsely claims it is outside the inverse-cosine range and replaces it by $3\\pi-7$. The 512-update policy has the correct answer but also says 7 is less than $2\\pi$, an incorrect supporting statement.",
+      "interpretation": "Regularizing policy drift does not guarantee correct local range checks. Conversely, a correct longer-trained answer can still contain a contradictory explanatory sentence.",
+      "evidence": [
+        {"policy": "kl", "quote": "7 - 2\\pi\\) is not within the range"},
+        {"policy": "kl", "quote": "\\boxed{3\\pi - 7}"},
+        {"policy": "step512", "quote": "less than \\(2\\pi\\) radians"}
+      ]
+    },
+    {
+      "source_index": 1475,
+      "title": "Longer RL finds a short polynomial-elimination strategy",
+      "mechanism": "Training-duration improvement",
+      "policies": ["base", "grpo", "sft", "lr3", "step512"],
+      "expected": {"base": false, "grpo": false, "sft": false, "lr3": false, "step512": true},
+      "reference_reasoning": "If the quartics are $F$ and $G$, their common monic quadratic divides $3F-G=14(x^2-2x+5)$, so it must be $p(x)=x^2-2x+5$ and $p(1)=4$. Direct multiplication verifies that this quadratic divides both originals.",
+      "analysis": "The baseline and original GRPO repeatedly seek common roots without reaching an answer. Their text ends with a function-call-limit message, but no external tool execution is established. Higher-LR GRPO chooses the wrong sign in the quadratic factor; SFT asserts an invalid factorization. At the same LR after 512 updates, GRPO eliminates the quartic term with a linear combination and gets 4.",
+      "interpretation": "This is a substantive strategy difference in matched saved greedy outputs: root hunting is replaced by degree reduction. It is an illustrative improvement, not proof that longer training consistently produces better strategies.",
+      "evidence": [
+        {"policy": "lr3", "quote": "The polynomial \\( p(x) = x^2 + 2x + 5 \\) is a factor of both"},
+        {"policy": "sft", "quote": "(x^2 + 5x + 5)(x^2 - 4x + 2)"},
+        {"policy": "step512", "quote": "h(x) = 14(x^2 - 2x + 5)"}
+      ]
+    },
+    {
+      "source_index": 7254,
+      "title": "Longer training keeps the probability setup but loses the answer",
+      "mechanism": "Training-duration regression and output contamination",
+      "policies": ["base", "grpo", "sft", "lr3", "step512"],
+      "expected": {"grpo": true, "lr3": true, "step512": false},
+      "reference_reasoning": "The favorable choices number $6^3=216$, and the total is $\\binom{18}{3}=816$. The probability is $216/816=9/34$, not $1/4$.",
+      "analysis": "The 128-update higher-LR policy returns 9/34. The 512-update policy still describes the correct numerator and denominator, but its generated output and final prose replace the answer by 0.25 and 1/4. Its stored extracted answer is a literal probability placeholder from an earlier code string, adding an extraction problem to the wrong stated result.",
+      "interpretation": "This is a regression in carrying a correct setup to an exact committed answer, not a failure to identify the sampling space. It counterbalances the polynomial improvement under longer training.",
+      "evidence": [
+        {"policy": "lr3", "quote": "\\boxed{\\frac{9}{34}}"},
+        {"policy": "step512", "quote": "probability = favorable_ways / total_ways"},
+        {"policy": "step512", "quote": "\\boxed{\\frac{1}{4}}"}
+      ]
+    }
+  ]
+}
